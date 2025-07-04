@@ -1,4 +1,4 @@
 {
-  "pythonPath": "/opt/anaconda3/envs/jupyterlab-debugger/bin/python",
+  "pythonPath": "/opt/anaconda3/envs/pyspark_env/bin/python",
   "uiMode": "managed-by-web-app"
 }
