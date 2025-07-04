@@ -1,0 +1,105 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="PySpark MLlib" type="PySparkSubmitConfigurationType" factoryName="ClusterSparkJobConfigurationType" singleton="false" show_console_on_std_err="false" show_console_on_std_out="false">
+    <option name="allowRunningInParallel" value="true" />
+    <option name="archives">
+      <list />
+    </option>
+    <option name="artifactArgs" value="" />
+    <option name="artifactPath">
+      <FilePath>
+        <option name="path" value="" />
+        <option name="type" value="" />
+      </FilePath>
+    </option>
+    <option name="beforeShellScript" value="" />
+    <option name="className" value="" />
+    <option name="clusterManager" value="LOCAL" />
+    <option name="clusterManagerDeployModeDefault" value="true" />
+    <option name="conf" value="" />
+    <option name="debugDriverEnable" value="true" />
+    <option name="debugDriverPort" />
+    <option name="debugDriverSuspend" />
+    <option name="deployMode" value="CLIENT" />
+    <option name="driverClassPath">
+      <list />
+    </option>
+    <option name="driverCores" value="" />
+    <option name="driverJavaOptions" value="" />
+    <option name="driverLibraryPath">
+      <list />
+    </option>
+    <option name="driverMemory" value="" />
+    <option name="envParams" value="" />
+    <option name="excludePackages" value="" />
+    <option name="executorCores" value="" />
+    <option name="executorMemory" value="" />
+    <option name="files">
+      <list />
+    </option>
+    <option name="interactive" value="false" />
+    <option name="jars">
+      <list />
+    </option>
+    <option name="keytab">
+      <FilePath>
+        <option name="path" value="" />
+        <option name="type" value="" />
+      </FilePath>
+    </option>
+    <option name="master" value="local" />
+    <option name="numExecutors" value="" />
+    <option name="packages" value="" />
+    <option name="principal" value="" />
+    <option name="projectPathOnTarget" />
+    <option name="propertiesFile">
+      <FilePath>
+        <option name="path" value="" />
+        <option name="type" value="" />
+      </FilePath>
+    </option>
+    <option name="proxyUser" value="" />
+    <option name="pyFiles">
+      <list />
+    </option>
+    <option name="queue" value="" />
+    <option name="remoteTargetId" />
+    <option name="repositories" value="" />
+    <option name="selectedOptions">
+      <list />
+    </option>
+    <option name="shellExecutor" value="/bin/bash" />
+    <option name="sparkHome" value="" />
+    <option name="sparkMonitoringDriverId" value="" />
+    <option name="supervise" value="false" />
+    <option name="targetDirectory">
+      <FilePath>
+        <option name="path" value="" />
+        <option name="type" value="server" />
+      </FilePath>
+    </option>
+    <option name="template" value="false" />
+    <option name="totalExecutorCores" value="" />
+    <option name="verbose" value="false" />
+    <option name="visibleBlocks">
+      <map>
+        <entry key="SPARK_CONFIG" value="false" />
+        <entry key="DEPENDENCIES" value="false" />
+        <entry key="MAVEN_DEPENDENCIES" value="false" />
+        <entry key="DRIVER" value="false" />
+        <entry key="EXECUTOR" value="false" />
+        <entry key="KERBEROS" value="false" />
+        <entry key="ADDITIONAL" value="false" />
+        <entry key="SHELL_OPTIONS" value="false" />
+      </map>
+    </option>
+    <option name="workDirectoryPath">
+      <FilePath>
+        <option name="path" value="" />
+        <option name="type" value="server" />
+      </FilePath>
+    </option>
+    <method v="2">
+      <option name="SftpSparkFileUpload" enabled="false" />
+    </method>
+  </configuration>
+</component>
