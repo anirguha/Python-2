@@ -202,3 +202,5 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 Data Science - Classification/Data/creditcard.csv
+/Colab Notebooks/_gsdata_
+/Colab Notebooks/_gsdata_
