@@ -8,6 +8,9 @@ Original file is located at
 """
 
 import os, json
+import shutil
+import subprocess
+import sys
 
 # Simulate secret retrieval
 sa_json_text = r"""{
@@ -56,9 +59,34 @@ creds = service_account.Credentials.from_service_account_file(
     "/content/sa.json", scopes=["https://www.googleapis.com/auth/drive"])
 drive_service = build("drive", "v3", credentials=creds)
 
-!apt-get -y -qq install fuse rclone || true
-!command -v rclone >/dev/null || (curl -s https://rclone.org/install.sh | bash)
-!rclone version
+def sh(cmd, check=True):
+    """Run a shell command via bash, showing the command and raising on error."""
+    print("+", cmd)
+    return subprocess.run(cmd, shell=True, check=check, executable="/bin/bash")
+
+def ensure_rclone():
+    # Quiet non-interactive apt on Debian/Ubuntu/Colab
+    os.environ.setdefault("DEBIAN_FRONTEND", "noninteractive")
+
+    # Try apt first (works on Colab)
+    try:
+        sh("apt-get -y -qq update && apt-get -y -qq install fuse rclone || true")
+    except subprocess.CalledProcessError:
+        pass  # not fatal; we’ll try the installer below
+
+    # If rclone still missing, use official install script
+    if not shutil.which("rclone"):
+        sh("curl -fsSL https://rclone.org/install.sh | bash")
+
+    # Final sanity check
+    if not shutil.which("rclone"):
+        raise RuntimeError("rclone is not installed and the installer failed.")
+
+    # Show version
+    sh("rclone version")
+
+if __name__ == "__main__":
+    ensure_rclone()
 
 import os, textwrap, pathlib, subprocess, time
 
