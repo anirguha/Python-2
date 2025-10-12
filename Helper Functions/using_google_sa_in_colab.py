@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import base64
+import pathlib
 
 # Simulate secret retrieval
 sa_json_text = r"""{
