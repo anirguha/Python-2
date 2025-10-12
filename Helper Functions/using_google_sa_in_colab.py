@@ -11,6 +11,7 @@ import os, json
 import shutil
 import subprocess
 import sys
+import base64
 
 # Simulate secret retrieval
 sa_json_text = r"""{
