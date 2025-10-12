@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "phrasal-hold-327509",
+  "private_key_id": "eac5ab43ee968142cae8393a9ec74e4858c5118f",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC0dTKmxQNnDwSi\nr6AwbUYjPAG8EBj5wgbqNKyO+DhF8J2HM2aiIONBtuSWLqoZpJIfTeui9ZVWLRJO\nbWPb/EU/DGxaNXeqSxg+ynuujm1L3oYMIHzO48vzaJFr/KBePBebjJoioms4D73L\n3e6Qjky21osOc2nqe3SMqd1LdYRb7O+dv8dgD+eS+vlIYG59EOrLxe3PMrJBE9QY\ngzNQXavYtlxrcSw1B3cBDnwjr/IdtX5uEZNcPGTUKWce2qnceojMvKX5IA23+YWC\n9uDbp02iO8Bmz61/FPodG15PVJTfeU+zYgOAdwS13os9DWJqonZCluaPP15+4QqI\nhOn6CXuHAgMBAAECggEAFeYXBHfqBsqixF9NsDLCjSoOB9VoQn7SOf+0ZREoOwyN\nAUgyj0Awc9wO906oY7494UCidL8apT+I9i1+Lcb6XEFUsMnGQMsmIRCPW8p65vcV\nC0mx+6VXLa2l4BXjHCxsrPquBb/yBPacEK5Y8f/ivVlhvJoy4zqiFSPT8AFN053D\n67RtSTpo4Ncm1UxZT2SKYv3yGaQAi5zmT89CRWyGes3cVnsUdzy1WU0Riu1qis9R\n/oZ4K/wV2+6uwYsCxotKuGFftdsduiRUxxTTqiy/ViSanLVpSHHjUgCkPsx5kpqk\n16z8gpC4jv9ZZ/FmeZlw9L/0V7MlvSU4tnyz9gc62QKBgQDgPsSQ2VTEApMpJgou\nTt0Mbj8zQ5v93yNDiRHN8AcK+XZaS6FSx731T+59i/rlPJ4iIfxRyMOL+EKveQWA\nkZwve1lyzxKK57fZpHNqnNiL1Kfuw76bm1mvTqgy83GpiCm8emY2etTjd5dynaxc\nLM+S70Te5UsMP41C7awhlBbegwKBgQDOAxH4ksePfHKCo/TkKP4m70STvQ9gJ/Pq\nLyWex5uMY6IFAqKX2PRAQEno5bPomEiuOTSNwMk6dK99qv2MYoZ/DdoKBOmBOlmX\nKIdt6IcOMPq0A0+1zRjfnsdut3D1OHd5p3ZOgEQysubetHgXLEiNsj++WSTZLLkl\n1O9M/mvfrQKBgGxyLoGWeQXp8N0/hkDq5r/yOSJDmhbmaJlqmm+rmtxV1ETKupPc\nASO3qjCRF57w99Ct+uZaXyc7wpQ1xNFumcfksVdyiRcgBKt+ekqe26KUDzrK800x\njefX9EPfs6I3NWfvEatbL8VpupY1ZnuVODVo/TeGUAr2WQx7AHmksoKdAoGBAKIh\nJm6DTYyt+wy3bg51+Ha5zTWcD9Kz/rEqA6hvHQqiiqr4xO9OLgO21LP2utztpB2B\nJcv9kiBwHoB/JmXqUEEDrLo/3Wj3e/SLT/H+kvNnNpafGIdSbyXmNrv6oGpM0zIp\nyeDD72gbBbj1PKG4Fy10v9fVHjvQh7GvX9kvTcRNAoGAf3k5H9tOkqNii2kbb1ww\nDJAWguEUhl8uauVF9x3vbTR3q8K+w2NeKhfoTPJxJGiLEuvbKr2i4t+BTGyIuE5j\n+sSJcpc86L8nil2WDAMbqgczucbN9OhPv9P5dc9Wi3iytfexq7GrRDUCr0dOD8Ae\n1p9SL08Xd2h2EHaoBDI9kk0=\n-----END PRIVATE KEY-----\n",
+  "client_email": "colab-drive-access@phrasal-hold-327509.iam.gserviceaccount.com",
+  "client_id": "117174193156951204686",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/colab-drive-access%40phrasal-hold-327509.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
