@@ -2,6 +2,7 @@ import torch
 import torchvision
 import argparse
 
+
 import model_builder
 
 # Creating a parser
@@ -13,11 +14,11 @@ parser.add_argument("--image",
 
 # Get a model path
 parser.add_argument("--model_path",
-                    default="models/05_going_modular_script_mode_tinyvgg_model.pth",
+                    default="models/tinyvgg_modified.pth",
                     type=str,
                     help="target model to use for prediction filepath")
 
-args = parser.parse_args()
+args = parser.parse_args([])
 
 # Setup class names
 class_names = ["pizza", "steak", "sushi"]
