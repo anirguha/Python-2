@@ -29,3 +29,6 @@ def copy_helper_functions():
     shutil.rmtree("Python-2")
 
     print("✅ Copy complete!")
+
+if __name__ == "__main__":
+    copy_helper_functions()
