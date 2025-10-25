@@ -3,18 +3,23 @@ Contains functionality for creating PyTorch DataLoaders for
 image classification data.
 """
 import os
+import torch
+from torch import _pin_memory
 
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
 NUM_WORKERS = os.cpu_count()
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def create_dataloaders(
     train_dir: str,
     test_dir: str,
     transform: transforms.Compose,
     batch_size: int,
-    num_workers: int=NUM_WORKERS
+    num_workers: int=NUM_WORKERS,
+    pin_memory: bool=True,
+    device=device
 ):
   """Creates training and testing DataLoaders.
   Takes in a training directory and testing directory path and turns
