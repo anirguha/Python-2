@@ -327,21 +327,21 @@ def download_data(source: str,
 
     # If the image folder doesn't exist, download it and prepare it... 
     if image_path.is_dir():
-        print(f"[INFO] {image_path} directory exists, skipping download.")
+        print(f"\u2139\ufe0f {image_path} directory exists, skipping download.")
     else:
-        print(f"[INFO] Did not find {image_path} directory, creating one...")
+        print(f"\u2139\ufe0f Did not find {image_path} directory, creating one...")
         image_path.mkdir(parents=True, exist_ok=True)
         
         # Download pizza, steak, sushi data
         target_file = Path(source).name
         with open(data_path / target_file, "wb") as f:
             request = requests.get(source)
-            print(f"[INFO] Downloading {target_file} from {source}...")
+            print(f"\u2139\ufe0f Downloading {target_file} from {source}...")
             f.write(request.content)
 
         # Unzip pizza, steak, sushi data
         with zipfile.ZipFile(data_path / target_file, "r") as zip_ref:
-            print(f"[INFO] Unzipping {target_file} data...") 
+            print(f"\u2139\ufe0f Unzipping {target_file} data...") 
             zip_ref.extractall(image_path)
 
         # Remove .zip file
