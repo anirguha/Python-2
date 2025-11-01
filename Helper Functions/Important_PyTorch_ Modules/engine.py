@@ -60,7 +60,7 @@ def train_step(model: torch.nn.Module,
     # Adjust metrics to get average loss and accuracy per batch
     train_loss = train_loss / len(dataloader)
     train_acc = train_acc / len(dataloader)
-    return train_loss, train_acc
+    return train_loss, train_acc * 100
 
 def test_step(model: torch.nn.Module,
               dataloader: torch.utils.data.DataLoader,
@@ -106,7 +106,7 @@ def test_step(model: torch.nn.Module,
     # Adjust metrics to get average loss and accuracy per batch
     test_loss = test_loss / len(dataloader)
     test_acc = test_acc / len(dataloader)
-    return test_loss, test_acc
+    return test_loss, test_acc * 100
 
 def train(model: torch.nn.Module,
           train_dataloader: torch.utils.data.DataLoader,
