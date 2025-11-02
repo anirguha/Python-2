@@ -176,13 +176,13 @@ def download_image(
     last_exc = None
     for candidate_url, source in download_candidates:
         if not quiet:
-            print(f"[info] Attempting: {source} -> {candidate_url}")
+            print(f"\u2139\ufe0f Attempting: {source} -> {candidate_url}")
         # Skip non-jpg URLs quickly if they obviously don't end with jpg/jpeg
         if not candidate_url.lower().endswith((".jpg", ".jpeg")):
             # We'll still try (some services redirect to .jpg), but add a HEAD check.
             if not _head_content_type_is_jpeg(candidate_url):
                 if not quiet:
-                    print("[warn] URL doesn't look like a JPEG by HEAD content-type; still attempting download.")
+                    print("u26a0\ufe0f URL doesn't look like a JPEG by HEAD content-type; still attempting download.")
         # Try multiple times if allowed
         attempt = 0
         while attempt <= retries:
@@ -192,18 +192,18 @@ def download_image(
                 if not _is_jpeg(save_path):
                     raise ValueError("Downloaded file does not appear to be a JPEG (bad magic bytes).")
                 if not quiet:
-                    print(f"[ok] Saved: {save_path} (source: {source}; attempts: {attempt+1})")
+                    print(f"\u2705 Saved: {save_path} (source: {source}; attempts: {attempt+1})")
                 return save_path
             except Exception as e:
                 last_exc = e
                 attempt += 1
                 if attempt <= retries:
                     if not quiet:
-                        print(f"[retry] Failed attempt {attempt} for {candidate_url}: {e}; retrying...")
+                        print(f"\u27F3 Failed attempt {attempt} for {candidate_url}: {e}; retrying...")
                     time.sleep(1.0 + attempt * 0.5)
                 else:
                     if not quiet:
-                        print(f"[error] Giving up on {candidate_url}: {e}")
+                        print(f"\u274C Giving up on {candidate_url}: {e}")
                     break
 
     # If we got here, all candidates failed
@@ -243,10 +243,10 @@ def main(argv: Optional[list[str]] = None) -> int:
             quiet=args.quiet,
         )
         if not args.quiet:
-            print(f"Done → {path}")
+            print(f"\u2705 Done → {path}")
         return 0
     except Exception as e:
-        print(f"[fatal] {e}", file=sys.stderr)
+        print(f"u1F4A3 {e}", file=sys.stderr)
         return 2
 
 
