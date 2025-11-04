@@ -3,8 +3,8 @@
 Generic image downloader (works as CLI and importable module).
 
 Features:
-- Accepts a search term (Wikimedia Commons -> LoremFlickr fallback) OR a direct image URL.
-- Validates JPEG using Content-Type and JPEG magic bytes.
+- Accepts a search term (Wikimedia Commons; optional LoremFlickr fallback) OR a direct image URL.
+- Validates JPEG using magic bytes (0xFF 0xD8).
 - CLI flags for output path/dir, filename, retries, timeouts, quiet mode, and seed.
 - Importable function: download_image(...)
 
@@ -28,19 +28,22 @@ from typing import Optional, Tuple
 
 import requests
 
+# --- Endpoints & headers ---
+# Use the Wikimedia Commons MediaWiki Action API (NOT the Wikipedia Featured Feed).
 WIKI_API = "https://commons.wikimedia.org/w/api.php"
+
+# Public read access does NOT require Authorization. Use a descriptive UA only.
 HEADERS = {
-    # Friendly User-Agent to avoid 403s from some image hosts / APIs
-    "User-Agent": "GenericImageDownloader/1.0 (https://example.com; contact: you@example.com)"
+    "User-Agent": "Mini Food Vision Model (anirguha@hotmail.com)"
 }
 
 JPEG_MAGIC_PREFIX = b"\xff\xd8"  # JPEG files start with 0xFF 0xD8
 
 
 # ------------------------- Helpers: find images -------------------------- #
-def find_commons_jpg(term: str, max_results: int = 60, timeout: int = 20) -> Optional[str]:
+def find_commons_jpg(term: str, max_results: int = 50, timeout: int = 20) -> Optional[str]:
     """
-    Search Wikimedia Commons for images related to `term` and return a random JPG URL.
+    Search Wikimedia Commons (File: namespace) for images related to `term` and return a random JPG URL.
     Returns None if nothing found or on error.
     """
     params = {
@@ -48,10 +51,11 @@ def find_commons_jpg(term: str, max_results: int = 60, timeout: int = 20) -> Opt
         "format": "json",
         "generator": "search",
         "gsrsearch": f"{term} filetype:bitmap",
-        "gsrnamespace": 6,
-        "gsrlimit": max_results,
+        "gsrnamespace": 6,                 # File: namespace
+        "gsrlimit": min(50, max_results),  # non-bot cap is usually 50
         "prop": "imageinfo",
-        "iiprop": "url",
+        "iiprop": "url|mime",
+        "redirects": 1,
     }
     try:
         r = requests.get(WIKI_API, params=params, headers=HEADERS, timeout=timeout)
@@ -60,32 +64,31 @@ def find_commons_jpg(term: str, max_results: int = 60, timeout: int = 20) -> Opt
     except Exception:
         return None
 
-    pages = data.get("query", {}).get("pages", {})
-    if not pages:
-        return None
-
+    pages = data.get("query", {}).get("pages", {}) or {}
     jpgs = []
     for p in pages.values():
-        infos = p.get("imageinfo", [])
-        if not infos:
-            continue
-        url = infos[0].get("url")
-        if url and url.lower().endswith((".jpg", ".jpeg")):
-            jpgs.append(url)
+        infos = p.get("imageinfo", []) or []
+        for ii in infos:
+            url = ii.get("url")
+            mime = (ii.get("mime") or "").lower()
+            if not url:
+                continue
+            if url.lower().endswith((".jpg", ".jpeg")) or "jpeg" in mime:
+                jpgs.append(url)
 
-    if not jpgs:
-        return None
-    return random.choice(jpgs)
+    return random.choice(jpgs) if jpgs else None
 
 
 def fallback_loremflickr(term: str, width: int = 1200, height: int = 800) -> str:
     """Simple fallback random JPG provider. Not guaranteed license-friendly for redistribution."""
-    return f"https://loremflickr.com/{width}/{height}/{term}.jpg"
+    safe_term = (term or "random").replace(" ", ",")
+    return f"https://loremflickr.com/{width}/{height}/{safe_term}.jpg"
 
 
 # ------------------------- Helpers: download/validate -------------------- #
 def _stream_download(url: str, path: Path, timeout: int = 30, chunk_size: int = 8192, headers=None) -> None:
-    headers = headers or HEADERS
+    # Use a minimal UA-only header for image hosts/CDNs.
+    headers = headers or {"User-Agent": HEADERS["User-Agent"]}
     path.parent.mkdir(parents=True, exist_ok=True)
     with requests.get(url, headers=headers, timeout=timeout, stream=True) as r:
         r.raise_for_status()
@@ -108,29 +111,35 @@ def _is_jpeg(path: Path) -> bool:
 def _head_content_type_is_jpeg(url: str, timeout: int = 10) -> bool:
     """Use HEAD to inspect Content-Type (best-effort; some servers don't honor HEAD)."""
     try:
-        r = requests.head(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
-        ctype = r.headers.get("Content-Type", "").lower()
-        return "jpeg" in ctype or "jpg" in ctype or "image/" in ctype
+        r = requests.head(
+            url,
+            headers={"User-Agent": HEADERS["User-Agent"]},
+            timeout=timeout,
+            allow_redirects=True,
+        )
+        ctype = (r.headers.get("Content-Type") or "").lower()
+        return ("jpeg" in ctype) or ("jpg" in ctype) or ("image/" in ctype)
     except Exception:
         return False
 
 
 # ------------------------- Public API ---------------------------------- #
 def download_image(
-    term: Optional[str] = None, 
+    term: Optional[str] = None,
     *,
     url: Optional[str] = None,
     out_dir: str | Path = ".",
     out_file: Optional[str | Path] = None,
-    max_results: int = 60,
+    max_results: int = 50,
     retries: int = 2,
     seed: Optional[int] = None,
     timeout_commons: int = 20,
     timeout_download: int = 30,
     quiet: bool = False,
+    allow_fallback: bool = False,
 ) -> Path:
     """
-    Download an image either from `url` (direct) or by searching `term` (Commons -> fallback).
+    Download an image either from `url` (direct) or by searching `term` (Commons -> optional fallback).
     Returns Path to saved file.
 
     Only JPGs are accepted/validated (magic bytes). Raises exceptions on unrecoverable errors.
@@ -151,38 +160,42 @@ def download_image(
         # Default filename based on term (if present) or last part of URL
         if url:
             filename = Path(url.split("?")[0]).name or "download.jpg"
+            if not filename.lower().endswith((".jpg", ".jpeg")):
+                filename += ".jpg"
         else:
-            # sanitize term -> replace spaces with underscores
             filename = f"{term.strip().replace(' ', '_')}.jpg"
         save_path = out_dir / filename
 
-    # If direct url provided, try that first
+    # Build download candidates
     download_candidates: list[Tuple[str, str]] = []  # (url, source)
+
     if url:
         download_candidates.append((url, "direct"))
 
-    # If term provided, attempt commons then fallback
-    
-    try:
-        commons_url = find_commons_jpg(term, max_results=max_results, timeout=timeout_commons)
-        if commons_url:
-            download_candidates.append((commons_url, "Wikimedia Commons"))
-    except Exception:
-        # ignore and proceed to fallback
-        pass
-    # fallback service (random)
-    download_candidates.append((fallback_loremflickr(term), "LoremFlickr"))
+    if term:
+        try:
+            commons_url = find_commons_jpg(term, max_results=max_results, timeout=timeout_commons)
+            if commons_url:
+                download_candidates.append((commons_url, "Wikimedia Commons"))
+        except Exception:
+            # ignore and proceed to fallback candidates (if enabled)
+            pass
+        if allow_fallback:
+            download_candidates.append((fallback_loremflickr(term), "LoremFlickr"))
+
+    if not download_candidates:
+        raise RuntimeError("No download candidates available (no URL provided and Commons search returned nothing).")
 
     last_exc = None
     for candidate_url, source in download_candidates:
         if not quiet:
-            print(f"\u2139\ufe0f Attempting: {source} -> {candidate_url}")
-        # Skip non-jpg URLs quickly if they obviously don't end with jpg/jpeg
+            print(f"\u2139\uFE0F  Attempting: {source} -> {candidate_url}")
+        # Quick HEAD check for non-jpg extensions
         if not candidate_url.lower().endswith((".jpg", ".jpeg")):
-            # We'll still try (some services redirect to .jpg), but add a HEAD check.
             if not _head_content_type_is_jpeg(candidate_url):
                 if not quiet:
-                    print("u26a0\ufe0f URL doesn't look like a JPEG by HEAD content-type; still attempting download.")
+                    print("\u26A0\uFE0F  URL doesn't look like a JPEG by HEAD content-type; still attempting download.")
+
         # Try multiple times if allowed
         attempt = 0
         while attempt <= retries:
@@ -192,18 +205,18 @@ def download_image(
                 if not _is_jpeg(save_path):
                     raise ValueError("Downloaded file does not appear to be a JPEG (bad magic bytes).")
                 if not quiet:
-                    print(f"\u2705 Saved: {save_path} (source: {source}; attempts: {attempt+1})")
+                    print(f"\u2705  Saved: {save_path} (source: {source}; attempts: {attempt+1})")
                 return save_path
             except Exception as e:
                 last_exc = e
                 attempt += 1
                 if attempt <= retries:
                     if not quiet:
-                        print(f"\u27F3 Failed attempt {attempt} for {candidate_url}: {e}; retrying...")
+                        print(f"\u27F3  Failed attempt {attempt} for {candidate_url}: {e}; retrying...")
                     time.sleep(1.0 + attempt * 0.5)
                 else:
                     if not quiet:
-                        print(f"\u274C Giving up on {candidate_url}: {e}")
+                        print(f"\u274C  Giving up on {candidate_url}: {e}")
                     break
 
     # If we got here, all candidates failed
