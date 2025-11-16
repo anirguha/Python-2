@@ -1,7 +1,9 @@
+#engine.py
 """
 Contains functions for training and testing a PyTorch model.
 """
 import torch
+from time import time
 
 from tqdm.auto import tqdm
 from typing import Dict, List, Tuple
@@ -32,6 +34,8 @@ def train_step(model: torch.nn.Module,
     # Setup train loss and train accuracy values
     train_loss, train_acc = 0, 0
 
+    time_start = time()
+
     # Loop through data loader data batches
     for batch, (X, y) in enumerate(dataloader):
         # Send data to target device
@@ -57,10 +61,12 @@ def train_step(model: torch.nn.Module,
         y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
         train_acc += (y_pred_class == y).sum().item()/len(y_pred)
 
+    train_time_elapsed = time() - time_start
+
     # Adjust metrics to get average loss and accuracy per batch
     train_loss = train_loss / len(dataloader)
     train_acc = train_acc / len(dataloader)
-    return train_loss, train_acc * 100
+    return train_loss, train_acc * 100, train_time_elapsed
 
 def test_step(model: torch.nn.Module,
               dataloader: torch.utils.data.DataLoader,
@@ -85,6 +91,8 @@ def test_step(model: torch.nn.Module,
     # Setup test loss and test accuracy values
     test_loss, test_acc = 0, 0
 
+    start_time = time()
+
     # Turn on inference context manager
     with torch.inference_mode():
         # Loop through DataLoader batches
@@ -104,9 +112,10 @@ def test_step(model: torch.nn.Module,
             test_acc += ((test_pred_labels == y).sum().item()/len(test_pred_labels))
 
     # Adjust metrics to get average loss and accuracy per batch
+    test_time_elapsed = time() - start_time
     test_loss = test_loss / len(dataloader)
     test_acc = test_acc / len(dataloader)
-    return test_loss, test_acc * 100
+    return test_loss, test_acc * 100, test_time_elapsed
 
 def train(model: torch.nn.Module,
           train_dataloader: torch.utils.data.DataLoader,
@@ -134,8 +143,10 @@ def train(model: torch.nn.Module,
     each epoch.
     In the form: {train_loss: [...],
               train_acc: [...],
+              train_time: [...],
               test_loss: [...],
-              test_acc: [...]}
+              test_acc: [...]},
+              test_time: [...]}
     For example if training for epochs=2:
              {train_loss: [2.0616, 1.0537],
               train_acc: [0.3945, 0.3945],
@@ -145,18 +156,20 @@ def train(model: torch.nn.Module,
     # Create empty results dictionary
     results = {"train_loss": [],
                "train_acc": [],
+               "train_time": [],
                "test_loss": [],
-               "test_acc": []
+               "test_acc": [],
+               "test_time": []
     }
 
     # Loop through training and testing steps for a number of epochs
     for epoch in tqdm(range(epochs)):
-        train_loss, train_acc = train_step(model=model,
+        train_loss, train_acc, train_time = train_step(model=model,
                                           dataloader=train_dataloader,
                                           loss_fn=loss_fn,
                                           optimizer=optimizer,
                                           device=device)
-        test_loss, test_acc = test_step(model=model,
+        test_loss, test_acc, test_time = test_step(model=model,
           dataloader=test_dataloader,
           loss_fn=loss_fn,
           device=device)
@@ -166,15 +179,20 @@ def train(model: torch.nn.Module,
           f"Epoch: {epoch+1} | "
           f"train_loss: {train_loss:.4f} | "
           f"train_acc: {train_acc:.4f} | "
+          f"train_time: {train_time:.2f} seconds | "
           f"test_loss: {test_loss:.4f} | "
-          f"test_acc: {test_acc:.4f}"
+          f"test_acc: {test_acc:.4f} | "
+          f"test_time: {test_time:.2f} seconds"
         )
+
 
         # Update results dictionary
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
+        results["train_time"].append(train_time)
         results["test_loss"].append(test_loss)
         results["test_acc"].append(test_acc)
+        results["test_time"].append(test_time)
 
     # Return the filled results at the end of the epochs
     return results
