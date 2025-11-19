@@ -12,7 +12,8 @@ def train_step(model: torch.nn.Module,
                dataloader: torch.utils.data.DataLoader,
                loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
-               device: torch.device) -> Tuple[float, float]:
+               device: torch.device,
+               disable_prorgess_bar: bool = False) -> Tuple[float, float]:
     """Trains a PyTorch model for a single epoch.
     Turns a target PyTorch model to training mode and then
     runs through all of the required training steps (forward
@@ -36,8 +37,13 @@ def train_step(model: torch.nn.Module,
 
     time_start = time()
 
+    pb_train = tqdm(enumerate(dataloader),
+                    desc=f"Training Epoch {epoch}",
+                    total=len(dataloader),
+                    disable=disable_prorgess_bar)
+
     # Loop through data loader data batches
-    for batch, (X, y) in enumerate(dataloader):
+    for batch, (X, y) in pb_train:
         # Send data to target device
         X, y = X.to(device), y.to(device)
 
@@ -61,6 +67,14 @@ def train_step(model: torch.nn.Module,
         y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
         train_acc += (y_pred_class == y).sum().item()/len(y_pred)
 
+        # Update prorgess bar
+        pb_train.set_postfix(
+          {
+            "train loss:" train_loss / (batch+1),
+            "train acc:" train_acc / (batch+1)
+          }
+        )
+
     train_time_elapsed = time() - time_start
 
     # Adjust metrics to get average loss and accuracy per batch
@@ -71,7 +85,8 @@ def train_step(model: torch.nn.Module,
 def test_step(model: torch.nn.Module,
               dataloader: torch.utils.data.DataLoader,
               loss_fn: torch.nn.Module,
-              device: torch.device) -> Tuple[float, float]:
+              device: torch.device,
+             disable_prorgess_bar: bool = False) -> Tuple[float, float]:
     """Tests a PyTorch model for a single epoch.
     Turns a target PyTorch model to "eval" mode and then performs
     a forward pass on a testing dataset.
@@ -93,10 +108,15 @@ def test_step(model: torch.nn.Module,
 
     start_time = time()
 
+    pb_test = tqdm(enumerate(dataloader),
+                   desc=f"Testing Epoch {epoch}",
+                   total=len(dataloader),
+                   disable=disable_prorgess_bar)
+
     # Turn on inference context manager
     with torch.inference_mode():
         # Loop through DataLoader batches
-        for batch, (X, y) in enumerate(dataloader):
+        for batch, (X, y) in pb_test:
             # Send data to target device
             X, y = X.to(device), y.to(device)
 
@@ -111,6 +131,13 @@ def test_step(model: torch.nn.Module,
             test_pred_labels = test_pred_logits.argmax(dim=1)
             test_acc += ((test_pred_labels == y).sum().item()/len(test_pred_labels))
 
+            # Update prorgess bar
+            pb_test.set_postfix(
+              {"test loss:" test_loss / (batch+1),
+               "test acc:" test_acc / (batch+1)
+              }
+            )
+
     # Adjust metrics to get average loss and accuracy per batch
     test_time_elapsed = time() - start_time
     test_loss = test_loss / len(dataloader)
@@ -123,7 +150,8 @@ def train(model: torch.nn.Module,
           optimizer: torch.optim.Optimizer,
           loss_fn: torch.nn.Module,
           epochs: int,
-          device: torch.device) -> Dict[str, List]:
+          device: torch.device,
+          disable_progress_bar: bool = False) -> Dict[str, List]:
     """Trains and tests a PyTorch model.
     Passes a target PyTorch models through train_step() and test_step()
     functions for a number of epochs, training and testing the model
@@ -163,16 +191,22 @@ def train(model: torch.nn.Module,
     }
 
     # Loop through training and testing steps for a number of epochs
-    for epoch in tqdm(range(epochs)):
-        train_loss, train_acc, train_time = train_step(model=model,
+    for epoch in tqdm(range(epochs), disable=disable_prorgess_bar):
+        train_loss, train_acc, train_time = train_step(epoch=epoch,
+                                          model=model,
                                           dataloader=train_dataloader,
                                           loss_fn=loss_fn,
                                           optimizer=optimizer,
-                                          device=device)
-        test_loss, test_acc, test_time = test_step(model=model,
-          dataloader=test_dataloader,
-          loss_fn=loss_fn,
-          device=device)
+                                          device=device,
+                                          disable_prorgess_bar=disable_prorgess_bar
+                                                      )
+        test_loss, test_acc, test_time = test_step(epoch=epoch, 
+                                                  model=model,
+                                                  dataloader=test_dataloader,
+                                                  loss_fn=loss_fn,
+                                                  device=device,
+                                                  disable_prorgess_bar=disable_prorgess_bar
+                                                  )
 
         # Print out what's happening
         print(
