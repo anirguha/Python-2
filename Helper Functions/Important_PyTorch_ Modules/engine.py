@@ -8,7 +8,8 @@ from time import time
 from tqdm.auto import tqdm
 from typing import Dict, List, Tuple
 
-def train_step(model: torch.nn.Module,
+def train_step(epoch: int,
+               model: torch.nn.Module,
                dataloader: torch.utils.data.DataLoader,
                loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
@@ -82,7 +83,8 @@ def train_step(model: torch.nn.Module,
     train_acc = train_acc / len(dataloader)
     return train_loss, train_acc * 100, train_time_elapsed
 
-def test_step(model: torch.nn.Module,
+def test_step(epoch: int,
+              model: torch.nn.Module,
               dataloader: torch.utils.data.DataLoader,
               loss_fn: torch.nn.Module,
               device: torch.device,
@@ -191,21 +193,21 @@ def train(model: torch.nn.Module,
     }
 
     # Loop through training and testing steps for a number of epochs
-    for epoch in tqdm(range(epochs), disable=disable_prorgess_bar):
+    for epoch in tqdm(range(epochs), disable=disable_progress_bar):
         train_loss, train_acc, train_time = train_step(epoch=epoch,
                                           model=model,
                                           dataloader=train_dataloader,
                                           loss_fn=loss_fn,
                                           optimizer=optimizer,
                                           device=device,
-                                          disable_prorgess_bar=disable_prorgess_bar
+                                          disable_progress_bar=disable_progress_bar
                                                       )
         test_loss, test_acc, test_time = test_step(epoch=epoch, 
                                                   model=model,
                                                   dataloader=test_dataloader,
                                                   loss_fn=loss_fn,
                                                   device=device,
-                                                  disable_prorgess_bar=disable_prorgess_bar
+                                                  disable_progress_bar=disable_progress_bar
                                                   )
 
         # Print out what's happening
