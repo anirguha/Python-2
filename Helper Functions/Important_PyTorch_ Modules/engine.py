@@ -70,8 +70,8 @@ def train_step(model: torch.nn.Module,
         # Update prorgess bar
         pb_train.set_postfix(
           {
-            "train loss:" train_loss / (batch+1),
-            "train acc:" train_acc / (batch+1)
+            "train loss": train_loss / (batch+1),
+            "train acc": train_acc / (batch+1)
           }
         )
 
@@ -133,8 +133,8 @@ def test_step(model: torch.nn.Module,
 
             # Update prorgess bar
             pb_test.set_postfix(
-              {"test loss:" test_loss / (batch+1),
-               "test acc:" test_acc / (batch+1)
+              {"test loss": test_loss / (batch+1),
+               "test acc": test_acc / (batch+1)
               }
             )
 
