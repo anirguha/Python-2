@@ -8,12 +8,13 @@ from time import time
 from tqdm.auto import tqdm
 from typing import Dict, List, Tuple
 
-def train_step(model: torch.nn.Module,
+def train_step(epoch: int,
+               model: torch.nn.Module,
                dataloader: torch.utils.data.DataLoader,
                loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                device: torch.device,
-               disable_prorgess_bar: bool = False) -> Tuple[float, float]:
+               disable_progress_bar: bool = False) -> Tuple[float, float]:
     """Trains a PyTorch model for a single epoch.
     Turns a target PyTorch model to training mode and then
     runs through all of the required training steps (forward
@@ -40,7 +41,7 @@ def train_step(model: torch.nn.Module,
     pb_train = tqdm(enumerate(dataloader),
                     desc=f"Training Epoch {epoch}",
                     total=len(dataloader),
-                    disable=disable_prorgess_bar)
+                    disable=disable_progress_bar)
 
     # Loop through data loader data batches
     for batch, (X, y) in pb_train:
@@ -82,11 +83,12 @@ def train_step(model: torch.nn.Module,
     train_acc = train_acc / len(dataloader)
     return train_loss, train_acc * 100, train_time_elapsed
 
-def test_step(model: torch.nn.Module,
+def test_step(epoch: int,
+              model: torch.nn.Module,
               dataloader: torch.utils.data.DataLoader,
               loss_fn: torch.nn.Module,
               device: torch.device,
-             disable_prorgess_bar: bool = False) -> Tuple[float, float]:
+             disable_progress_bar: bool = False) -> Tuple[float, float]:
     """Tests a PyTorch model for a single epoch.
     Turns a target PyTorch model to "eval" mode and then performs
     a forward pass on a testing dataset.
@@ -111,7 +113,7 @@ def test_step(model: torch.nn.Module,
     pb_test = tqdm(enumerate(dataloader),
                    desc=f"Testing Epoch {epoch}",
                    total=len(dataloader),
-                   disable=disable_prorgess_bar)
+                   disable=disable_progress_bar)
 
     # Turn on inference context manager
     with torch.inference_mode():
@@ -191,21 +193,21 @@ def train(model: torch.nn.Module,
     }
 
     # Loop through training and testing steps for a number of epochs
-    for epoch in tqdm(range(epochs), disable=disable_prorgess_bar):
+    for epoch in tqdm(range(epochs), disable=disable_progress_bar):
         train_loss, train_acc, train_time = train_step(epoch=epoch,
                                           model=model,
                                           dataloader=train_dataloader,
                                           loss_fn=loss_fn,
                                           optimizer=optimizer,
                                           device=device,
-                                          disable_prorgess_bar=disable_prorgess_bar
+                                          disable_progress_bar=disable_progress_bar
                                                       )
         test_loss, test_acc, test_time = test_step(epoch=epoch, 
                                                   model=model,
                                                   dataloader=test_dataloader,
                                                   loss_fn=loss_fn,
                                                   device=device,
-                                                  disable_prorgess_bar=disable_prorgess_bar
+                                                  disable_progress_bar=disable_progress_bar
                                                   )
 
         # Print out what's happening
