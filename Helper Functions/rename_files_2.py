@@ -16,6 +16,8 @@ def run(folder_path,
         rename_files_2.run("/path", "ABC*", 28, preserve_ext=True, dry_run=True)
     """
     from pathlib import Path
+    from rename_files import rename_files
+
     return rename_files(
         folder_path=Path(folder_path),
         file_pattern=file_pattern,
