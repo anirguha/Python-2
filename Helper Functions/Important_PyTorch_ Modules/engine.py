@@ -14,7 +14,7 @@ def train_step(epoch: int,
                loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                device: torch.device,
-               disable_prorgess_bar: bool = False) -> Tuple[float, float]:
+               disable_progress_bar: bool = False) -> Tuple[float, float]:
     """Trains a PyTorch model for a single epoch.
     Turns a target PyTorch model to training mode and then
     runs through all of the required training steps (forward
@@ -41,7 +41,7 @@ def train_step(epoch: int,
     pb_train = tqdm(enumerate(dataloader),
                     desc=f"Training Epoch {epoch}",
                     total=len(dataloader),
-                    disable=disable_prorgess_bar)
+                    disable=disable_progress_bar)
 
     # Loop through data loader data batches
     for batch, (X, y) in pb_train:
@@ -88,7 +88,7 @@ def test_step(epoch: int,
               dataloader: torch.utils.data.DataLoader,
               loss_fn: torch.nn.Module,
               device: torch.device,
-             disable_prorgess_bar: bool = False) -> Tuple[float, float]:
+             disable_progress_bar: bool = False) -> Tuple[float, float]:
     """Tests a PyTorch model for a single epoch.
     Turns a target PyTorch model to "eval" mode and then performs
     a forward pass on a testing dataset.
@@ -113,7 +113,7 @@ def test_step(epoch: int,
     pb_test = tqdm(enumerate(dataloader),
                    desc=f"Testing Epoch {epoch}",
                    total=len(dataloader),
-                   disable=disable_prorgess_bar)
+                   disable=disable_progress_bar)
 
     # Turn on inference context manager
     with torch.inference_mode():
