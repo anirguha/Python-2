@@ -1,4 +1,4 @@
 {
-  "pythonPath": "/opt/anaconda3/envs/DL_env/bin/python",
+  "pythonPath": "/opt/anaconda3/envs/DL_env_arm/bin/python",
   "uiMode": "managed-by-web-app"
 }
