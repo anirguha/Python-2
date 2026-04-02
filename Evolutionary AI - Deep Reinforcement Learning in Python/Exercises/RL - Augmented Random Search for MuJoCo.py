@@ -75,3 +75,21 @@ class ANN:
     
         
 # %%
+class OnlineStandardScaler:
+    def __init__(self, num_inputs):
+        self.n = 0
+        self.mean = np.zeros(num_inputs)
+        self.var = np.zeros(num_inputs)
+        
+    def partial_fit(self, x):
+        self.n += 1
+        delta1 = x - self.mean
+        self.mean += delta1 / self.n
+        delta2 = x - self.mean
+        self.var += delta1 * delta2
+        
+    def transform(self, x):
+        return (x - self.mean) / (np.sqrt(self.var / self.n) + 1e-8)
+    
+scaler = OnlineStandardScaler(D)
+# %%
