@@ -2,5 +2,12 @@
     "workbench.editorAssociations": {
         "*.copilotmd": "vscode.markdown.preview.editor",
         "file:/**/*.csv": "jupyter-data-wrangler"
-    }
+    },
+    "python-envs.pythonProjects": [
+        {
+            "path": ".",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ]
 }
