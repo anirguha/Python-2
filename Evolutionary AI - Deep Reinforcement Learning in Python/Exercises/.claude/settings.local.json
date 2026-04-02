@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(python3 -m pip list)",
+      "Bash(conda env:*)",
+      "Read(//Users/AnirbanGuha/**)",
+      "Bash(conda run:*)",
+      "Bash(python3 -c \"import sys; print\\(sys.executable\\); print\\(sys.version\\)\")",
+      "Bash(pip3 list:*)",
+      "Bash(python3 -m venv .venv)",
+      "Bash(.venv/bin/python --version)"
+    ]
+  }
+}
