@@ -37,12 +37,13 @@ for ticker in tickers:
 
 # %%
 # Compute RSI and MACD indicators
-for ticker in tickers:
-    data[f'ticker_{ticker}_rsi'] = talib.RSI(data[ticker], timeperiod=14)/50 - 1 # To normalize between -1 and 1
-    macd, macdsignal, macdhist = talib.MACD(data[ticker], fastperiod=12, slowperiod=26, signalperiod=9)
-    data[f'ticker_{ticker}_macd'] = macd / data[ticker] * 10 # Normalize by price to get a percentage
-    data[f'ticker_{ticker}_macdsignal'] = macdsignal / data[ticker] * 10 # Normalize by price to get a percentage
-    data[f'ticker_{ticker}_macdhist'] = macdhist
+if data is not None:
+    for ticker in tickers:
+        data[f'ticker_{ticker}_rsi'] = talib.RSI(data[ticker], timeperiod=14)/50 - 1 # To normalize between -1 and 1
+        macd, macdsignal, macdhist = talib.MACD(data[ticker], fastperiod=12, slowperiod=26, signalperiod=9)
+        data[f'ticker_{ticker}_macd'] = macd / data[ticker] * 10 # Normalize by price to get a percentage
+        data[f'ticker_{ticker}_macdsignal'] = macdsignal / data[ticker] * 10 # Normalize by price to get a percentage
+        data[f'ticker_{ticker}_macdhist'] = macdhist
 # %%
 # Split into train and test data
 train_data = None
