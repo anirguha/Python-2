@@ -67,10 +67,10 @@ def run_experiment(m1: float, m2: float, m3: float, e: float, n: int, decaying_e
 
         if p < eps_t:
             # Explore: select a random bandit
-            j = np.random.randint(len(bandits))
+            j = int(np.random.randint(len(bandits)))
         else:
             # Exploit: select the bandit with the highest estimated mean reward
-            j = np.argmax([b.estimate for b in bandits])
+            j = int(np.argmax([b.estimate for b in bandits]))
         x = bandits[j].pull()
         bandits[j].update_estimate(x)
 
@@ -97,6 +97,45 @@ def plot_results(cum_avg, e: float):
 
     return None
 
+
+def plot_reference_lines_and_format_axis(n: int, means):
+    """Plots true mean reference lines and applies shared axis formatting."""
+    for idx, mean in enumerate(means, start=1):
+        color = ["r", "g", "b"][idx - 1]
+        plt.plot(np.ones(n) * mean, f"{color}--", label=f"Bandit {idx}")
+
+    plt.xscale('log')
+    plt.xlabel('Number of trials')
+    plt.ylabel('Cumulative Average Reward')
+    plt.legend()
+
+
+def run_and_plot_block(
+    title: str,
+    eps_values,
+    mu1: float,
+    mu2: float,
+    mu3: float,
+    n: int,
+    decaying_epsilon: bool,
+    log_prefix: str,
+):
+    """Runs one experiment block (fixed/decaying epsilon) and plots its curves."""
+    plt.title(title)
+    last_bandits = []
+
+    for eps_value in eps_values:
+        print(f"[{log_prefix}] Running experiment with epsilon = {eps_value}...")
+        cumulative_average, count_suboptimal, bandits = run_experiment(
+            mu1, mu2, mu3, eps_value, n, decaying_epsilon=decaying_epsilon
+        )
+        plot_results(cumulative_average, eps_value)
+        print(f"  Suboptimal choices: {count_suboptimal}")
+        last_bandits = bandits
+
+    plot_reference_lines_and_format_axis(n, [mu1, mu2, mu3])
+    return last_bandits
+
 # Main function
 if __name__ == '__main__':
     mu1, mu2, mu3 = 1.5, 2.5, 3.5
@@ -108,33 +147,29 @@ if __name__ == '__main__':
 
     # --- Fixed epsilon (curves descend toward their asymptote) ---
     plt.sca(axes[0])
-    axes[0].set_title('Fixed Epsilon')
-    for eps_value in eps:
-        print(f"[Fixed] Running experiment with epsilon = {eps_value}...")
-        cumulative_average, count_suboptimal, bandits = run_experiment(mu1, mu2, mu3, eps_value, N)
-        plot_results(cumulative_average, eps_value)
-        print(f"  Suboptimal choices: {count_suboptimal}")
-    plt.plot(np.ones(N) * max(mu1, mu2, mu3), 'k--', label='True Best Mean')
-    plt.xscale('log')
-    plt.xlabel('Number of trials')
-    plt.ylabel('Cumulative Average Reward')
-    plt.legend()
+    run_and_plot_block(
+        title='Fixed Epsilon',
+        eps_values=eps,
+        mu1=mu1,
+        mu2=mu2,
+        mu3=mu3,
+        n=N,
+        decaying_epsilon=False,
+        log_prefix='Fixed',
+    )
 
     # --- Decaying epsilon 1/t (curves rise toward the optimal) ---
     plt.sca(axes[1])
-    axes[1].set_title('Decaying Epsilon (1/t)')
-    for eps_value in eps:
-        print(f"[Decaying] Running experiment with initial epsilon = {eps_value}...")
-        cumulative_average, count_suboptimal, bandits = run_experiment(
-            mu1, mu2, mu3, eps_value, N, decaying_epsilon=True
-        )
-        plot_results(cumulative_average, eps_value)
-        print(f"  Suboptimal choices: {count_suboptimal}")
-    plt.plot(np.ones(N) * max(mu1, mu2, mu3), 'k--', label='True Best Mean')
-    plt.xscale('log')
-    plt.xlabel('Number of trials')
-    plt.ylabel('Cumulative Average Reward')
-    plt.legend()
+    bandits = run_and_plot_block(
+        title='Decaying Epsilon (1/t)',
+        eps_values=eps,
+        mu1=mu1,
+        mu2=mu2,
+        mu3=mu3,
+        n=N,
+        decaying_epsilon=True,
+        log_prefix='Decaying',
+    )
 
     plt.tight_layout()
     plt.show()
