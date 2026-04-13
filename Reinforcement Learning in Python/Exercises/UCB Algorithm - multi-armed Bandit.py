@@ -8,20 +8,78 @@ EPS = 0.1
 
 # Define Bandit class
 class Bandit:
+    """
+    Represents a single-armed bandit as part of a multi-armed bandit problem.
+
+    This class models a single slot machine (bandit) with a true win rate (p)
+    and maintains an estimate of the win rate based on the outcomes of
+    interactions with the bandit. It allows for simulating pulls on the bandit
+    and updating its estimated win rate.
+
+    Attributes:
+        p (float): The true win rate of the bandit, a probability between 0 and 1.
+        p_estimate (float): The estimated win rate of the bandit based on interaction history.
+        N (int): The number of times this bandit has been played.
+    """
     def __init__(self, p):
+        """
+        Initializes the bandit with its true win rate and tracks its estimated win
+        rate and the number of times it has been played.
+
+        Args:
+            p: True win rate of the bandit.
+
+        Attributes:
+            p_estimate: Float representing the current estimated win rate of the bandit.
+            N: Integer representing the number of times the bandit has been played.
+        """
         self.p = p  # true win rate
         self.p_estimate = 0.0  # estimated win rate
         self.N = 0  # number of times this bandit has been played
 
     def pull(self):
+        """
+        Simulates the action of pulling a Bernoulli arm in a multi-armed bandit problem.
+
+        The method determines whether the pull of the arm is successful based on the
+        probability associated with the arm. A random value is generated and compared
+        against the success probability `p` to decide the result.
+
+        Returns:
+            bool: True if the pull is successful (random value is less than `p`), False otherwise.
+        """
         return np.random.random() < self.p
 
     def update(self, x):
+        """
+        Updates the estimate of a probability value with the given input.
+
+        The method incrementally updates the probability estimate (p_estimate)
+        based on new input data (x) while keeping track of the total count (N).
+
+        Args:
+            x: New input value used to update the probability estimate (float or int).
+        """
         self.N += 1
         self.p_estimate = ((self.N - 1) * self.p_estimate + x) / self.N
 
 # Define UCB1 algorithm
 def ucb1(mean, n, nj):
+    """
+    Calculates the Upper Confidence Bound (UCB1) value for a given input.
+
+    The UCB1 algorithm is used in multi-armed bandit problems to balance exploration and exploitation.
+    It computes an upper bound score considering the average reward, the total number of trials, and
+    the number of times a specific arm has been selected.
+
+    Args:
+        mean: The mean reward obtained from the selected arm.
+        n: The total number of trials conducted.
+        nj: The number of times the specific arm has been selected.
+
+    Returns:
+        float: The computed UCB1 value.
+    """
     return mean + np.sqrt(2 * np.log(n) / nj)
 
 ucb_values = np.zeros(NUM_TRIALS)
