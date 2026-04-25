@@ -146,10 +146,12 @@ def negative_grid(step_cost=-0.1):
 
 class WindyGrid:
   def __init__(self, rows, cols, start):
+
     self.rows = rows
     self.cols = cols
     self.i = start[0]
     self.j = start[1]
+
 
   def set(self, rewards, actions, probs):
     # rewards should be a dict of: (i, j): r (row, col): reward
@@ -163,13 +165,13 @@ class WindyGrid:
     self.j = s[1]
 
   def current_state(self):
-    return (self.i, self.j)
+    return self.i, self.j
 
   def is_terminal(self, s):
     return s not in self.actions
 
   def move(self, action):
-    s = (self.i, self.j)
+    s = self.current_state()
     a = action
 
     next_state_probs = self.probs[(s, a)]
