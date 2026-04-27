@@ -1,6 +1,7 @@
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
+import argparse
 
 
 _POLICY_ITERATION_PATH = Path(__file__).with_name(
@@ -116,24 +117,63 @@ def value_iteration(
 
     return V, policy
 
-def main():
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description='Windy Gridworld - Value Iteration (Probabilistic).')
+    p.add_argument('--grid-size', type=int, nargs=2, default=WINDY_GRID_SIZE)
+    p.add_argument('--grid-start', type=int, nargs=2, default=WINDY_GRID_START)
+    p.add_argument('--gamma', type=float, default=GAMMA)
+    p.add_argument('--tolerance', type=float, default=TOLERANCE)
+    p.add_argument('--step-cost', type=float, default=STEP_COST)
+
+    args = p.parse_args()
+    args.grid_size = tuple(args.grid_size)
+    args.grid_start = tuple(args.grid_start)
+    
+    return args
+
+def main(
+    grid_size: Tuple[int, int] = WINDY_GRID_SIZE,
+    grid_start: Tuple[int, int] = WINDY_GRID_START,
+    gamma: float = GAMMA,
+    tolerance: float = TOLERANCE,
+    step_cost: float = STEP_COST
+) -> None:
     """
-    Executes the main workflow for solving a grid environment problem with value iteration.
+    Executes the main function to run a value iteration algorithm on a windy grid world
+    with penalized step cost. The algorithm computes the optimal value function and
+    policy for the specified grid world parameters.
 
-    This function initializes a grid environment, constructs the transition and reward tables,
-    and performs value iteration to compute the optimal state-value function and policy.
-    Finally, it outputs the computed values and policy to the console.
-
-    Raises:
-        Exception: If an error occurs during grid initialization, table construction, or
-        value iteration computation.
+    Args:
+        grid_size: A tuple defining the size of the grid world (rows, columns).
+        grid_start: A tuple defining the starting position in the grid (row, column).
+        gamma: A float specifying the discount factor for future rewards.
+        tolerance: A float defining the stopping criterion for the value iteration
+            algorithm.
+        step_cost: A float specifying the cost of taking a step in the grid world.
     """
     g = windy_grid_penalized()
+
     _, reward_table = build_transition_reward_table(g)
     states = list(g.get_all_states())
-    V, policy = value_iteration(g.probs, reward_table, states, g.actions)
+
+    V, policy = value_iteration(
+        g.probs,
+        reward_table,
+        states,
+        g.actions,
+        gamma=gamma,
+        tolerance=tolerance
+    )
+
     print_values(V, g)
     print_policy(policy, g)
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(
+         grid_size=args.grid_size,
+         grid_start=args.grid_start,
+         gamma=args.gamma,
+         tolerance=args.tolerance,
+         step_cost=args.step_cost
+         )
