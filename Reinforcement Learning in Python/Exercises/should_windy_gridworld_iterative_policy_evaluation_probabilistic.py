@@ -5,7 +5,7 @@ from pathlib import Path
 
 MODULE_PATH = (
     Path(__file__).resolve().parent
-    / "Windy Gridworld - Iterative Policy Eval;uation (Probabilistic).py"
+    / "Windy Gridworld - Iterative Policy Evaluation (Probabilistic).py"
 )
 
 

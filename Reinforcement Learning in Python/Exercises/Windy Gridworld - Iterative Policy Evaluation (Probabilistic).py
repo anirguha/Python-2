@@ -6,7 +6,7 @@ expectation updates until convergence.
 """
 import math
 import random
-from typing import Dict, KeysView, List, Optional, Set, Tuple, Union
+from typing import Dict, KeysView, List, Optional, Set, Tuple, Union, overload
 
 
 State = Tuple[int, int]
@@ -36,15 +36,15 @@ class WindyGridworld:
 
     Attributes:
         rows (int): Number of rows in the grid.
-        cols (int): Number of columns in the grid.
-        start (State): Starting state of the agent, represented as a tuple (row, column).
-        terminal_states (List[State]): List of terminal states where the environment
+        Cols (int): Number of columns in the grid.
+        Start (State): Starting state of the agent, represented as a tuple (row, column).
+        Terminal_states (List[State]): List of terminal states where the environment
             episode ends.
-        probs (TransitionProbs): Transition probabilities defining the likelihood of moving
+        Probs (TransitionProbs): Transition probabilities define the likelihood of moving
             between states given an action.
-        actions (ActionMap): Mapping of states to the list of available actions from each
+        Actions (ActionMap): Mapping of states to the list of available actions from each
             state.
-        rewards (StateRewardTable): Reward structure defining the rewards received for
+        Rewards (StateRewardTable): Reward structure defining the rewards received for
             reaching specific states.
     """
     def __init__(
@@ -60,7 +60,7 @@ class WindyGridworld:
         Args:
             rows (int): Number of rows in the grid.
             cols (int): Number of columns in the grid.
-            start (State): The starting state represented as a tuple (i, j) where 'i' is
+            start (State): The starting state is represented as a tuple (i, j) where 'i' is
                 the row index and 'j' is the column index.
         """
         self.rows = rows
@@ -123,7 +123,7 @@ class WindyGridworld:
             actions (ActionMap): A mapping from states to sets of available actions for each state.
                 Terminal states cannot have associated actions.
             probs (TransitionProbs): A mapping from (state, action) pairs to probabilities of transitioning
-                to subsequent states. The probabilities must sum up to 1.0 for each (state, action) pair.
+                to later states. The probabilities must sum up to 1.0 for each (state, action) pair.
         """
         normalized_actions: ActionMap = {}
         for state, available_actions in actions.items():
@@ -329,7 +329,7 @@ def _next_state(s: State, a: Action) -> State:
     from the action to the current state.
 
     Args:
-        s (State): The current state represented as a tuple of coordinates.
+        s (State): The current state is represented as a tuple of coordinates.
         a (Action): The action to be performed, which determines the direction
             and magnitude of the state change.
 
@@ -416,7 +416,7 @@ def negative_reward_gridworld(
         rows (int): Number of rows in the gridworld.
         cols (int): Number of columns in the gridworld.
         start (State): Starting state of the agent.
-        step_cost (float): Negative reward applied to every state on each
+        step_cost (float): Negative reward is applied to every state at each
             step. Defaults to -0.5.
 
     Returns:
@@ -492,7 +492,6 @@ def initialize_values(grid: WindyGridworld) -> ValueTable:
 def evaluate_policy(
         g: WindyGridworld,
         policy: Policy,
-        transition_probs: TransitionProbTable,
         rewards: RewardTable,
         values: ValueTable,
         discount_factor: float = 0.9,
@@ -503,8 +502,6 @@ def evaluate_policy(
     Args:
         g: The gridworld environment to evaluate the policy on.
         policy: A mapping from states to actions that defines the policy to be evaluated.
-        transition_probs: A dictionary mapping (state, action, next_state) tuples to their
-            corresponding transition probabilities.
         rewards: A dictionary mapping (state, action, next_state) tuples to their corresponding rewards.
         values: A dictionary mapping states to their current estimated value.
         discount_factor: A float value representing the discount factor for future rewards.
@@ -552,9 +549,9 @@ def evaluate_policy(
 def main() -> None:
     # Instantiate environment and print basic metadata.
     grid: WindyGridworld = windy_gridworld(rows=3, cols=4, start=(2, 0))
-    states, actions = grid.get_state_action_space()
-    num_states: int = grid.get_num_states()
-    num_actions: int = grid.get_num_actions((0, 0))
+    _, actions = grid.get_state_action_space()
+    # num_states: int = grid.get_num_states()
+    # num_actions: int = grid.get_num_actions((0, 0))
 
     # print(f"Gridworld Info: {grid}")
     # print(f"States: {states}")
@@ -594,7 +591,6 @@ def main() -> None:
     values = evaluate_policy(
         g=grid,
         policy=policy,
-        transition_probs=transition_probs,
         rewards=rewards,
         values=values,
         discount_factor=0.9,
