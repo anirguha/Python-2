@@ -285,6 +285,19 @@ class WindyGridworld:
         return f"GridWorld({self.i}, {self.j}, start={self.start}, terminal_states={self.terminal_states})"
 
 def print_values(V: ValueTable, g: WindyGridworld) -> None:
+    """
+    Prints the values of each state in a grid representation, using the provided value
+    table and grid layout. For states that are not part of the grid's valid states,
+    a placeholder 'XXX' is displayed.
+
+    Args:
+        V: A value table containing the mapping of states to their respective values.
+        g: An instance of WindyGridworld which provides information about grid
+            dimensions, state coordinates, and valid states.
+
+    Returns:
+        None
+    """
     for i in range(g.rows):
         row_items = []
         for j in range(g.cols):
@@ -297,6 +310,24 @@ def print_values(V: ValueTable, g: WindyGridworld) -> None:
     return None
 
 def print_policy(p: Policy, g: WindyGridworld) -> None:
+    """
+    Prints the policy for a WindyGridworld environment.
+
+    This function visualizes the policy by iterating through each cell of the
+    WindyGridworld grid and printing the corresponding action for each state.
+    If a state is not part of the grid's valid states, it prints 'XXX'. If
+    a state is terminal, it prints 'T'. For valid non-terminal states, it
+    prints the action specified in the policy.
+
+    Args:
+        p (Policy): The policy representing the actions to be taken for each
+            state in the grid.
+        g (WindyGridworld): The WindyGridworld environment providing information
+            about the grid dimensions, states, and terminal states.
+
+    Returns:
+        None
+    """
     for i in range(g.rows):
         row_items = []
         for j in range(g.cols):
@@ -311,6 +342,21 @@ def print_policy(p: Policy, g: WindyGridworld) -> None:
     return None
 
 def windy_grid():
+    """
+    Initializes a Windy Gridworld environment with a predefined size, start
+    location, rewards, actions, and transition probabilities.
+
+    The Windy Gridworld is a grid-based environment where each cell may have
+    specific rewards or penalties, and the agent must navigate through the
+    grid using available actions. The environment uses predefined transition
+    probabilities to determine the likelihood of reaching a particular state
+    given an action taken.
+
+    Returns:
+        WindyGridworld: An instance of the WindyGridworld environment
+        configured with its size, start position, rewards, actions, and
+        transition probabilities.
+    """
     rows, cols = WINDY_GRID_SIZE
     g = WindyGridworld(rows, cols, start=WINDY_GRID_START)
     global PROBS
@@ -324,6 +370,21 @@ def windy_grid():
     return g
 
 def windy_grid_penalized(step_cost: float = STEP_COST) -> WindyGridworld:
+    """
+    Initializes a WindyGridworld instance with specified step cost and predefined
+    rewards for each grid cell. The WindyGridworld instance simulates a grid-based
+    environment with both positive and negative terminal rewards and probabilistic
+    transitions.
+
+    Args:
+        step_cost: Default step cost applied to all non-terminal states in the
+            grid. This penalizes every move taken by the agent, encouraging
+            efficient paths.
+
+    Returns:
+        A configured WindyGridworld instance encompassing rows, columns, start state,
+        rewards, possible actions, and transition probabilities.
+    """
     global PROBS
     global ACTIONS
     rows, cols = WINDY_GRID_SIZE
@@ -350,6 +411,26 @@ def windy_grid_penalized(step_cost: float = STEP_COST) -> WindyGridworld:
     return g
 
 def get_transition_probs_and_rewards(g: WindyGridworld) -> Tuple[TransitionProbs, RewardTable]:
+    """
+    Extracts transition probabilities and rewards from a WindyGridworld object.
+
+    This function processes the state-action transition probabilities and the
+    corresponding rewards defined in a WindyGridworld instance, and returns them
+    as two separate dictionaries. The probabilities and rewards are indexed by
+    (state, action, next_state) tuples.
+
+    Args:
+        g (WindyGridworld): An instance of the WindyGridworld containing
+            the transition probability and reward information.
+
+    Returns:
+        Tuple[TransitionProbs, RewardTable]: A tuple containing the transition
+            probabilities and rewards. `TransitionProbs` is a dictionary where
+            keys are (state, action, next_state) tuples and values are the
+            corresponding probabilities. `RewardTable` is a dictionary where
+            keys are (state, action, next_state) tuples and values are the
+            rewards for those transitions.
+    """
     transition_probs: TransitionProbs = {}
     rewards: RewardTable = {}
 
@@ -364,6 +445,20 @@ def get_transition_probs_and_rewards(g: WindyGridworld) -> Tuple[TransitionProbs
 
 
 def build_transition_reward_table(g: WindyGridworld) -> Tuple[TransitionProbs, RewardTable]:
+    """
+    Builds the transition probability table and reward table for a given WindyGridworld instance.
+
+    This function creates and returns the transition probabilities and associated reward table
+    necessary for decision-making in the WindyGridworld environment.
+
+    Args:
+        g (WindyGridworld): The WindyGridworld instance for which the transition probabilities
+            and reward table are to be generated.
+
+    Returns:
+        Tuple[TransitionProbs, RewardTable]: A tuple containing the transition probability table
+            and the reward table derived from the given WindyGridworld instance.
+    """
     return get_transition_probs_and_rewards(g)
 
 def initialize_values(grid: WindyGridworld) -> ValueTable:
@@ -393,6 +488,27 @@ def evaluate_deterministic_policy(
         init_values: ValueTable | None = None,
         discount_factor: float = GAMMA,
 ) -> ValueTable:
+    """
+    Evaluates the expected state-values for a deterministic policy in a given gridworld environment.
+
+    This function computes the value of each state under a specific policy iteratively using the Bellman
+    expectation equation. The convergence of values is determined by a predefined tolerance.
+
+    Args:
+        g (WindyGridworld): The gridworld environment, which defines the states and actions.
+        policy (Policy): A mapping of states to actions representing the deterministic policy.
+        transition_probs (TransitionProbs): A mapping with keys as (state, action, next_state)
+            tuples and values as the transition probabilities between states.
+        rewards (RewardTable): A mapping with keys as (state, action, next_state) tuples and values
+            representing the reward received for transitioning between states under a given action.
+        init_values (ValueTable | None): An optional initial value function for all states. If not
+            provided, all states are initialized with a value of 0.0.
+        discount_factor (float): The discount factor (γ), representing the importance of future rewards.
+
+    Returns:
+        ValueTable: A mapping of states to their computed expected values under the given
+        deterministic policy.
+    """
     values = init_values.copy() if init_values is not None else {
         state: 0.0 for state in g.get_all_states()
     }
@@ -511,12 +627,24 @@ def iterate_policy(
     return p, v
 
 def parse_args() -> argparse.Namespace:
+    """
+    Parses command-line arguments.
+
+    This function creates an argument parser to parse the command-line arguments for
+    running the policy iteration on the windy gridworld. It provides options to
+    customize the step cost of non-terminal states.
+
+    Returns:
+        argparse.Namespace: A Namespace object containing the parsed arguments.
+    """
     parser = argparse.ArgumentParser(
         description="Run policy iteration on the windy gridworld."
     )
     parser.add_argument(
-        "--step-cost",
+        "step_cost",
         type=float,
+        nargs='?',
+        metavar="STEP_COST",
         default=STEP_COST,
         help=f"Step cost applied to non-terminal states (default: {STEP_COST}).",
     )
@@ -558,4 +686,3 @@ def main(step_cost: float = STEP_COST) -> None:
 if __name__ == '__main__':
     args = parse_args()
     main(step_cost=args.step_cost)
-

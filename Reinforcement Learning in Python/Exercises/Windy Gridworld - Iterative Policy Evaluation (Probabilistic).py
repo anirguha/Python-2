@@ -264,6 +264,10 @@ class WindyGridworld:
         self._require_configuration()
         return set(self.actions.keys()) | set(self.rewards.keys()) | set(self.terminal_states)
 
+    @overload
+    def get_action_space(self, state: None = ...) -> ActionMap: ...
+    @overload
+    def get_action_space(self, state: State) -> ActionSpace: ...
     def get_action_space(
             self,
             state: Optional[State] = None,
