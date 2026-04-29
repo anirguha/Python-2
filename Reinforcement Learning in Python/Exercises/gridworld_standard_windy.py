@@ -334,7 +334,12 @@ def _next_state(s: State, a: Action) -> State:
     return s[0] + di, s[1] + dj
 
 
-def standard_gridworld(rows: int, cols: int, start: State) -> WindyGridworld:
+def standard_gridworld(
+        rows: int,
+        cols: int,
+        start: State,
+        terminal_states: Optional[Tuple[State, ...]] = None,
+) -> WindyGridworld:
     """
     Creates and returns a standard gridworld environment with specified dimensions
     and starting state. The gridworld is predefined with specific rewards, actions,
@@ -349,9 +354,15 @@ def standard_gridworld(rows: int, cols: int, start: State) -> WindyGridworld:
         WindyGridworld: A configured WindyGridworld environment including defined
         rewards, available actions, and state transition probabilities.
     """
-    g = WindyGridworld(rows, cols, start)
-    rewards = {(0, 3): 1, (1, 3): -1}
-    actions: ActionMap = {
+    resolved_terminal_states: List[State] = (
+        list(terminal_states) if terminal_states is not None else [(0, 3), (1, 3)]
+    )
+    g = WindyGridworld(rows, cols, start, terminal_states=resolved_terminal_states)
+    default_terminal_rewards: Dict[State, float] = {(0, 3): 1, (1, 3): -1}
+    rewards: StateRewardTable = {
+        s: default_terminal_rewards.get(s, 0.0) for s in resolved_terminal_states
+    }
+    all_actions: ActionMap = {
         (0, 0): ('D', 'R'),
         (0, 1): ('L', 'R'),
         (0, 2): ('L', 'D', 'R'),
@@ -361,6 +372,11 @@ def standard_gridworld(rows: int, cols: int, start: State) -> WindyGridworld:
         (2, 1): ('L', 'R'),
         (2, 2): ('L', 'R', 'U'),
         (2, 3): ('L', 'U'),
+    }
+    actions: ActionMap = {
+        s: available_actions
+        for s, available_actions in all_actions.items()
+        if s not in resolved_terminal_states
     }
     # Build probs keyed by (s, a) as expected by move().
     # Each (s, a) deterministically leads to one next state with probability 1.
@@ -374,7 +390,12 @@ def standard_gridworld(rows: int, cols: int, start: State) -> WindyGridworld:
     return g
 
 
-def windy_gridworld(rows: int, cols: int, start: State) -> WindyGridworld:
+def windy_gridworld(
+        rows: int,
+        cols: int,
+        start: State,
+        terminal_states: Optional[Tuple[State, ...]] = None,
+) -> WindyGridworld:
     """
     Creates a WindyGridworld instance with a specified number of rows, columns, and a starting state.
 
@@ -391,7 +412,7 @@ def windy_gridworld(rows: int, cols: int, start: State) -> WindyGridworld:
         WindyGridworld: A gridworld instance with wind effects on transition probabilities
         in certain grid positions.
     """
-    g = standard_gridworld(rows, cols, start)
+    g = standard_gridworld(rows, cols, start, terminal_states=terminal_states)
     windy_probs = {((1, 2), 'U'): {(0, 2): 0.5, (1, 3): 0.5}}
     g.probs.update(windy_probs)
     return g
@@ -400,8 +421,9 @@ def negative_reward_gridworld(
         rows: int,
         cols: int,
         start: State,
+        terminal_states: Optional[Tuple[State, ...]] = None,
         step_cost: float = -0.5,
-) -> WindyGridworld:
+ ) -> WindyGridworld:
     """
     Creates and returns a WindyGridworld environment where all non-terminal
     states receive a constant negative reward (step cost).
@@ -417,9 +439,33 @@ def negative_reward_gridworld(
         WindyGridworld: A configured WindyGridworld instance with the
         given step cost applied to all states.
     """
-    g = windy_gridworld(rows, cols, start)
+    g = windy_gridworld(rows, cols, start, terminal_states=terminal_states)
 
     for s in g.get_all_states():
         if not g.is_terminal(s):
             g.rewards[s] = step_cost
     return g
+
+
+def assign_random_terminal_rewards(
+         grid: WindyGridworld,
+         terminal_states: Optional[Tuple[State, ...]] = None,
+         positive_reward: float = 1.0,
+         negative_reward: float = -1.0,
+ ) -> State:
+    """Assign +reward to one terminal state and -reward to the others.
+
+    Returns the terminal state chosen as the positive terminal.
+    """
+    target_terminal_states: Tuple[State, ...] = (
+        terminal_states if terminal_states is not None else tuple(grid.terminal_states)
+    )
+    if len(target_terminal_states) < 2:
+        raise ValueError("At least two terminal states are required for random +/- assignment.")
+
+    positive_terminal = random.choice(list(target_terminal_states))
+    for s in target_terminal_states:
+        grid.rewards[s] = positive_reward if s == positive_terminal else negative_reward
+
+    return positive_terminal
+
