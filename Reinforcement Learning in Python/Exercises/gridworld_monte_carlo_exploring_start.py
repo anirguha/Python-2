@@ -12,49 +12,51 @@ from pretty_printing import print_policy, print_values
 
 GRID_SIZE: Tuple[int, int] = (3, 4)
 START_STATE: State = (2, 0)
-ALL_POSSIBLE_ACTIONS: Tuple[str, ...] = ('U', 'D', 'L', 'R')
+# ALL_POSSIBLE_ACTIONS: Tuple[str, ...] = ('U', 'D', 'L', 'R')
 Action = str
 Reward = float
 Policy = Dict[State, Action]
 ActionValueTable = Dict[State, Dict[Action, Reward]]
 SampleCountTable = Dict[State, Dict[Action, int]]
 TERMINAL_STATES: Tuple[State, ...] = ((0, 3), (1, 3))
-GAMMA: float = 0.9
 
 
 def play_episode(
     grid: WindyGridworld,
     policy: Policy,
-    max_steps: int = 20,
+    max_steps: int = 100,
 ) -> Tuple[List[State], List[Action], List[Reward]]:
     """
-    Plays a single episode in the WindyGridworld environment following a given policy.
+    Simulates an episode in the WindyGridworld environment by following a given policy.
 
-    The function initiates an episode from the START_STATE based on the supplied
-    policy. It then follows the policy to select actions, updates the environment, and
-    records the sequence of states and rewards until the episode terminates or the maximum
-    number of steps is reached.
+    Starting from a random valid state, this function plays an episode by taking actions
+    from the provided policy until the maximum allowable steps are reached or the episode ends.
+    The function records the sequence of states, actions, and rewards encountered during
+    the episode.
 
     Args:
-        grid (WindyGridworld): The WindyGridworld environment in which the episode will be played.
-        policy (Policy): A policy mapping states to actions, guiding the agent's behavior.
-        max_steps (int): Optional; Maximum number of steps to play the episode. Defaults to 20.
+        grid (WindyGridworld): The WindyGridworld environment to simulate the episode in.
+        policy (Policy): A mapping from states to actions, dictating the behavior of the agent.
+        max_steps (int, optional): The maximum number of steps to simulate in the episode.
+            Defaults to 100.
 
     Returns:
-        Tuple[List[State], List[Action], List[Reward]]:
-            A tuple containing three lists:
-            - List of states visited during the episode.
-            - List of actions taken during the episode in the same order as the states.
-            - List of rewards obtained during the episode in the same order as the states.
+        Tuple[List[State], List[Action], List[Reward]]: A tuple containing the sequence of
+        states, actions, and rewards encountered during the episode.
+
+    Raises:
+        ValueError: If the randomly chosen starting state is terminal and has no available
+        actions.
     """
     # Returns a list of states and rewards from the current state
     # start at random state and play the episode until max_steps or episode ends
-    start_states: List[State] = list(policy.keys())
+    action_map: Dict[State, Tuple[Action, ...]] = cast(Dict[State, Tuple[Action, ...]], grid.get_action_space())
+    start_states: List[State] = list(action_map.keys())
     start_state: State = choice(start_states)
     grid.set_state(start_state)
     s: State = grid.current_state()
 
-    initial_action_space = cast(Tuple[Action, ...], grid.get_action_space(s))
+    initial_action_space = action_map[start_state]
     initial_actions = list(initial_action_space)
     if not initial_actions:
         raise ValueError(f"Exploring start landed on terminal state {s}, which has no actions.")
@@ -77,6 +79,8 @@ def play_episode(
 
         if grid.end_episode():
             break
+        if s not in policy:
+            raise ValueError(f"Policy has no action for non-terminal state {s}.")
 
         a = policy[s]
 
@@ -98,12 +102,21 @@ def get_max_key_value(d: Dict[Action, float]) -> Tuple[Action, float]:
         A tuple where the first element is an action from the input dictionary and the second
         element is the maximum value (a float) from the dictionary.
     """
+    if not d:
+        raise ValueError("Input dictionary is empty.")
+    if len(d) == 1:
+        return next(iter(d.items()))
+    if len(d) == 0:
+        raise ValueError("Input dictionary contains no values.")
+
     max_val = max(d.values())
     max_keys = [k for k, v in d.items() if v == max_val]
 
     max_key = choice(max_keys)
 
     return max_key, max_val
+
+
 
 def create_random_policy(g: WindyGridworld) -> Iterator[Tuple[State, Action]]:
     """
@@ -157,62 +170,66 @@ def initialize_values_returns(g: WindyGridworld) -> tuple[ActionValueTable, Samp
 
     return Q, sample_counts
 
-def find_optimum_q(g: WindyGridworld,
+def monte_carlo_control_es(g: WindyGridworld,
                    policy: Policy,
                    Q: ActionValueTable,
                    sample_counts: SampleCountTable,
-                   num_runs: int) -> list[float]:
+                   gamma: float = 0.9,
+                   num_runs: int = 10000,
+                   max_steps: int = 100) -> list[float]:
     """
-    Updates the Q-values for a given policy in a Windy Gridworld environment
-    over a specified number of iterations (episodes) and returns the list
-    of maximum Q-value changes per iteration for analysis or plotting.
-
-    This function performs iterative updates on the Q-value function based on the
-    given environment and policy using a Monte Carlo method. It tracks changes
-    in Q-values to evaluate convergence and updates the policy greedily based
-    on the updated Q-values.
+    Uses Monte Carlo control with exploring starts to optimize a policy for a given environment.
+    This function applies the Monte Carlo control algorithm to iteratively improve an
+    epsilon-greedy policy using first visit and exploring start techniques. The action-value table
+    is updated after each episode using the observed returns, and changes are tracked for each
+    iteration to analyze convergence.
 
     Args:
-        g (WindyGridworld): The Windy Gridworld environment containing state transitions
-            and rewards.
-        policy (Policy): Initial policy used for interacting with the environment. This
-            policy will be updated based on Q-value improvements during the function
-            execution.
-        Q (dict[State, Reward]): A mapping of states to dictionaries that contain action-value
-            function (Q-values) for each action in that state.
-        sample_counts (dict[tuple[tuple[int, int], str], int]): A dictionary mapping state-action
-            pairs to the number of times they have been sampled (visited) during
-            episodes.
-        num_runs (int): The number of episodes to run for updating Q-values and policies.
+        g (WindyGridworld): The environment where the agent interacts.
+        policy (Policy): The epsilon-greedy policy is to be optimized.
+        Q (ActionValueTable): The action-value table mapping state-action pairs to values.
+        sample_counts (SampleCountTable): A table that tracks how many times each
+            state-action pair has been visited.
+        gamma (float): The discount factor, controlling the effect of future rewards. The default is 0.9.
+        num_runs (int): The number of iterations for running the control algorithm. The default is 10,000.
+        max_steps (int): The maximum number of steps allowed per episode. Default is 100.
 
     Returns:
-        list[float]: A list containing the maximum Q-value change for each iteration
-            (episode), useful for analyzing the convergence behavior of the learning
-            process.
+        list[float]: A list containing the maximum change in Q values at each iteration,
+        useful for analyzing the convergence of the algorithm.
     """
     # Initialize the changes in Q values as a list - to be used for plotting
     changes: List[float] = []
     for it in range(num_runs):
         max_change: float = 0
-        states, actions, rewards = play_episode(g, policy)
+        states, actions, rewards = play_episode(g, policy, max_steps=max_steps)
         states_actions = list(zip(states[:-1], actions))
 
-        return_val: float = 0.0
+        first_visit_indices: Dict[Tuple[State, Action], int] = {}
+        for t, (s, a) in enumerate(states_actions):
+            if (s, a) not in first_visit_indices:
+                first_visit_indices[(s, a)] = t
+
+        G: float = 0.0
+
         for t in range(len(states_actions) - 1, -1, -1):
             s, a = states_actions[t]
             r = rewards[t + 1]
-            return_val = r + GAMMA * return_val
+            G = r + gamma * return_val
 
-            if (s, a) not in states_actions[:t]:
+            if first_visit_indices[(s, a)] == t:
                 q_old: float = Q[s][a]
                 sample_counts[s][a] += 1
-                Q[s][a] = q_old + (1 / sample_counts[s][a]) * (return_val - q_old)
+                Q[s][a] = q_old + (1 / sample_counts[s][a]) * (G - q_old)
 
                 # Update policy
-                policy[s] = get_max_key_value(Q[s])[0]
+                best_action, _ = get_max_key_value(Q[s])
+                policy[s] = best_action
 
                 # Update change
                 max_change = max(max_change, abs(Q[s][a] - q_old))
+
+        print(f"Iteration {it + 1}: Max Change = {max_change:.4f}")
 
         changes.append(max_change)
     return changes
@@ -275,7 +292,7 @@ def main() -> None:
     grid = negative_reward_gridworld(rows, cols, START_STATE, terminal_states=TERMINAL_STATES, step_cost=-0.05)
     policy: Policy = dict(create_random_policy(grid))
     Q, sample_counts = initialize_values_returns(grid)
-    changes = find_optimum_q(grid, policy, Q, sample_counts, num_runs=10_000)
+    changes = monte_carlo_control_es(grid, policy, Q, sample_counts, gamma=0.9, num_runs=10_000)
     plot_changes(changes)
     print("Optimal Policy:")
     print_policy(policy, grid)
