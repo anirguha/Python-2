@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Dict, KeysView, List, Optional, Set, Tuple, Union
+from typing import Dict, KeysView, List, Optional, Set, Tuple, overload
 
 
 State = Tuple[int, int]
@@ -49,13 +49,25 @@ class WindyGridworld:
             terminal_states: Optional[List[State]] = None,
     ) -> None:
         """
-        Initializes a grid-based environment with the given dimensions and starting state.
+        Represents a grid-based environment with states, rewards, and transition dynamics.
+
+        The environment is initialized with a number of rows and columns representing the
+        grid structure, a starting state, and an optional set of terminal states. Each state
+        is represented as a coordinate in the grid. Terminal states are states where the
+        environment ends.
+
+        Attributes:
+            rows: Number of rows in the grid.
+            cols: Number of columns in the grid.
+            start: Initial state of the agent, represented as a coordinate.
+            terminal_states: List of terminal states where the environment ends.
 
         Args:
-            rows (int): Number of rows in the grid.
-            cols (int): Number of columns in the grid.
-            start (State): The starting state is represented as a tuple (i, j) where 'i' is
-                the row index and 'j' is the column index.
+            rows: Number of rows in the grid.
+            cols: Number of columns in the grid.
+            start: Starting state represented as a coordinate (row, column).
+            terminal_states: Optional list of terminal states. If not specified, defaults to
+                [(0, 3), (1, 3)].
         """
         self.rows = rows
         self.cols = cols
@@ -258,16 +270,81 @@ class WindyGridworld:
         self._require_configuration()
         return set(self.actions.keys()) | set(self.rewards.keys()) | set(self.terminal_states)
 
+    @overload
+    def get_action_space(self, state: State) -> ActionSpace:
+        """
+        Retrieves the action space for the given state.
+
+        This method provides the available set of actions that can be
+        performed from the specified state according to the predefined
+        rules or configurations of the system.
+
+        Args:
+            state (State): The current state for which the action space
+                is being queried.
+
+        Returns:
+            ActionSpace: The set of permissible actions for the given state.
+        """
+        ...
+    @overload
+    def get_action_space(self, state: None) -> ActionMap:
+        """
+        Determines the appropriate action space based on the provided state.
+
+        If the given state is None, the method computes the full action space
+        mapping applicable in a global context. Otherwise, it determines the
+        specific action space for the given state.
+
+        Args:
+            state (Optional[None]): Represents the current state for which the
+                action space is being determined. If None, the global action
+                space is returned.
+
+        Returns:
+            ActionMap: A mapping representing the applicable action space for
+                the provided state or the global action space if no state is
+                given.
+        """
+        ...
     def get_action_space(
             self,
             state: Optional[State] = None,
-    ) -> Union[ActionMap, ActionSpace]:
+    ) -> ActionMap | ActionSpace:
+        """
+        Retrieves the action space for the given state.
+
+        This method provides either the full action space or the specific subset of
+        actions applicable to a provided state. If no state is provided, the entire
+        action space available for the configured instance is returned.
+
+        Args:
+            state (Optional[State]): The state for which the action space is to
+                be retrieved. If None, the method will return the global action
+                space.
+
+        Returns:
+            ActionMap | ActionSpace: The action space corresponding to the given
+            state, or the global action space if no state is specified.
+        """
         self._require_configuration()
         if state is None:
             return self.actions
         return self.actions.get(state, ())
 
     def is_terminal_state(self, s: State) -> bool:
+        """
+        Checks whether the given state is a terminal state.
+
+        This method determines if a provided state marks the end of a process or
+        activity, based on the implementation of the `is_terminal` method.
+
+        Args:
+            s (State): The state to check for terminality.
+
+        Returns:
+            bool: True if the given state is terminal, False otherwise.
+        """
         return self.is_terminal(s)
 
     def get_num_states(self) -> int:
@@ -341,18 +418,20 @@ def standard_gridworld(
         terminal_states: Optional[Tuple[State, ...]] = None,
 ) -> WindyGridworld:
     """
-    Creates and returns a standard gridworld environment with specified dimensions
-    and starting state. The gridworld is predefined with specific rewards, actions,
-    and deterministic transitions.
+    Creates and initializes a standard WindyGridworld instance with specified parameters. The
+    gridworld is defined with rows and columns, a starting state, and optionally, terminal states.
+    Default terminal rewards are defined for specific terminal states unless overridden.
 
     Args:
-        rows (int): The number of rows in the gridworld.
-        cols (int): The number of columns in the gridworld.
-        start (State): The starting state of the gridworld.
+        rows (int): Number of rows in the gridworld.
+        cols (int): Number of columns in the gridworld.
+        start (State): Initial state in the gridworld.
+        terminal_states (Optional[Tuple[State, ...]]): Tuple of terminal states. Defaults to
+            ((0, 3), (1, 3)) if not provided.
 
     Returns:
-        WindyGridworld: A configured WindyGridworld environment including defined
-        rewards, available actions, and state transition probabilities.
+        WindyGridworld: A configured instance of the WindyGridworld class with rewards, actions,
+        and transition probabilities based on the provided grid configuration.
     """
     resolved_terminal_states: List[State] = (
         list(terminal_states) if terminal_states is not None else [(0, 3), (1, 3)]
@@ -404,6 +483,7 @@ def windy_gridworld(
     function and then modified with new transition probabilities to integrate the wind effect.
 
     Args:
+        terminal_states:
         rows (int): Number of rows in the gridworld.
         cols (int): Number of columns in the gridworld.
         start (State): Starting state of the agent in the gridworld.
@@ -425,19 +505,21 @@ def negative_reward_gridworld(
         step_cost: float = -0.5,
  ) -> WindyGridworld:
     """
-    Creates and returns a WindyGridworld environment where all non-terminal
-    states receive a constant negative reward (step cost).
+    Creates a negative reward gridworld environment based on input dimensions, start state, terminal
+    states, and step cost. In this gridworld, all non-terminal states are associated with a fixed
+    negative reward, typically to encourage quicker paths to terminal states.
 
     Args:
-        rows (int): Number of rows in the gridworld.
-        cols (int): Number of columns in the gridworld.
-        start (State): Starting state of the agent.
-        step_cost (float): Negative reward is applied to every state at each
-            step. Defaults to -0.5.
+        rows (int): The number of rows in the gridworld.
+        cols (int): The number of columns in the gridworld.
+        start (State): The starting state in the gridworld.
+        terminal_states (Optional[Tuple[State, ...]]): Tuple of terminal states in the gridworld,
+            where no further actions are taken. Defaults to None.
+        step_cost (float): The reward received for being in any non-terminal state; typically
+            negative to promote efficiency. Defaults to -0.5.
 
     Returns:
-        WindyGridworld: A configured WindyGridworld instance with the
-        given step cost applied to all states.
+        WindyGridworld: A gridworld object configured with negative rewards for non-terminal states.
     """
     g = windy_gridworld(rows, cols, start, terminal_states=terminal_states)
 
@@ -453,9 +535,30 @@ def assign_random_terminal_rewards(
          positive_reward: float = 1.0,
          negative_reward: float = -1.0,
  ) -> State:
-    """Assign +reward to one terminal state and -reward to the others.
+    """
+    Assigns random positive and negative rewards to terminal states in a gridworld.
 
-    Returns the terminal state chosen as the positive terminal.
+    This function assigns a positive reward to one randomly chosen terminal state
+    and assigns a negative reward to all other terminal states in the specified
+    gridworld. If no terminal states are explicitly provided, the function uses
+    the grid's default terminal states.
+
+    Raises:
+        ValueError: If fewer than two terminal states are provided or exist
+        in the gridworld.
+
+    Args:
+        grid (WindyGridworld): The gridworld in which terminal state rewards
+            will be modified.
+        terminal_states (Optional[Tuple[State, ...]]): An optional tuple of terminal
+            states. If not provided, the terminal states are taken from the grid.
+        positive_reward (float): The reward value to assign to the randomly chosen
+            positive terminal state.
+        negative_reward (float): The reward value to assign to all remaining
+            terminal states.
+
+    Returns:
+        State: The terminal state that has been assigned the positive reward.
     """
     target_terminal_states: Tuple[State, ...] = (
         terminal_states if terminal_states is not None else tuple(grid.terminal_states)
