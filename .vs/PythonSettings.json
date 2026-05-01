@@ -1,0 +1,4 @@
+{
+  "Interpreter": "CondaEnv|CondaEnv|RL_win",
+  "TestFramework": "Pytest"
+}

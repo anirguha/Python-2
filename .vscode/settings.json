@@ -2,5 +2,11 @@
     "workbench.editorAssociations": {
         "*.copilotmd": "vscode.markdown.preview.editor",
         "file:/**/*.csv": "jupyter-data-wrangler"
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    "python.defaultInterpreterPath": "/Users/AnirbanGuha/miniforge3/envs/RL_ARM/bin/python",
+    "python.analysis.extraPaths": [
+        "/Users/AnirbanGuha/miniforge3/envs/RL_ARM/lib/python3.11/site-packages"
+    ]
 }

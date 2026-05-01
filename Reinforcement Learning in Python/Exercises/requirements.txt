@@ -1,0 +1,3 @@
+# Dependencies for scripts under Reinforcement Learning in Python/Exercises
+pytest>=9.0.0
+
