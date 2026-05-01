@@ -1,9 +1,6 @@
 from random import random, choice, shuffle
 from typing import Dict, List, Tuple, Iterator, cast
 
-import numpy as np
-import pandas as pd
-
 from gridworld_standard_windy import (
     WindyGridworld,
     # standard_gridworld,
@@ -84,28 +81,37 @@ def play_episode(
     grid: WindyGridworld,
     policy: Policy,
     state_visit_counts: StateSampleCounts, # Denotes the number of times a state has been visited
+    truncated_count: int,
+    terminated_count: int,
     start_state: State = START_STATE,
     max_steps: int = 100,
-) -> Tuple[List[State], List[Action], List[Reward]]:
+) -> Tuple[List[State], List[Action], List[Reward], int, int]:
     """
-    Simulates an episode in the WindyGridworld environment using a given policy to guide
-    the agent's actions, starting from a defined state, and records the outcomes.
+    Plays a single episode of the WindyGridworld environment using the provided policy and updates the state visit
+    counts, terminated, and truncated episode counters.
+
+    The function simulates a sequence of state transitions starting from an initial state. Actions are selected based
+    on the provided policy, and the environment responds with rewards and state transitions. The episode terminates
+    when either the maximum number of steps is reached or the environment signals the end of the episode.
 
     Args:
-        grid: The WindyGridworld environment to navigate during the episode.
-        policy: The policy dictating the agent's actions in each state.
-        state_visit_counts: A mapping that tracks the number of visits to each state
-            during the simulation.
-        start_state: The initial state where the agent starts the episode. Defaults
-            to START_STATE.
-        max_steps: The maximum number of steps the agent is allowed to take during
+        grid: WindyGridworld instance representing the environment where the episode takes place.
+        policy: Policy object used to determine actions based on the current state.
+        state_visit_counts: StateSampleCounts, a mapping of states to the number of times they are visited during
             the episode.
+        truncated_count: int, counter for episodes terminated due to reaching the maximum step limit.
+        terminated_count: int, counter for episodes terminated naturally by reaching an end condition in the environment.
+        start_state: State, the initial state for the episode (defaults to START_STATE).
+        max_steps: int, the maximum number of steps allowed in the episode (defaults to 100).
 
     Returns:
-        A tuple containing:
-          - A list of states visited during the episode.
-          - A list of actions taken during the episode.
-          - A list of rewards received during the episode.
+        Tuple[List[State], List[Action], List[Reward], int, int]:
+            A tuple containing:
+            - List of states visited during the episode.
+            - List of actions taken during the episode.
+            - List of rewards received during the episode.
+            - Updated truncated_count.
+            - Updated terminated_count.
     """
     action_map: Dict[State, Tuple[Action, ...]] = cast(
         Dict[State, Tuple[Action, ...]],
@@ -144,7 +150,12 @@ def play_episode(
             a = epsilon_greedy(policy, s, action_map)
             actions.append(a)
 
-    return states, actions, rewards
+    if steps == max_steps:
+        truncated_count += 1
+    else:
+        terminated_count += 1
+
+    return states, actions, rewards, truncated_count, terminated_count
 
 def get_max_key_value(d: Dict[Action, float]) -> Tuple[Action, float]:
     """
@@ -196,7 +207,7 @@ def create_random_policy(g: WindyGridworld) -> Iterator[Tuple[State, Action]]:
         yield s, action
 
 def initialize_values_returns(g: WindyGridworld) -> tuple[
-    ActionValueTable, SampleCountTable, StateSampleCounts, StateSampleCounts]:
+    ActionValueTable, SampleCountTable, StateSampleCounts, StateSampleCounts, int, int]:
     """
     Initializes the action-value function (Q), sample counts for state-action pairs,
     first-visit counts for states, and overall state visit counts for a given
@@ -228,6 +239,9 @@ def initialize_values_returns(g: WindyGridworld) -> tuple[
     state_sample_first_visit_counts: StateSampleCounts = {}
     state_visit_counts: StateSampleCounts = {}
 
+    truncated_count = 0
+    terminated_count = 0
+
     action_map = cast(Dict[State, Tuple[Action, ...]], g.get_action_space())
     all_states = g.get_all_states()
     for s, available_actions in action_map.items():
@@ -241,98 +255,145 @@ def initialize_values_returns(g: WindyGridworld) -> tuple[
     for s in all_states:
         state_visit_counts[s] = 0
 
-    return Q, sample_counts, state_sample_first_visit_counts, state_visit_counts
+    return Q, sample_counts, state_sample_first_visit_counts, state_visit_counts, truncated_count, terminated_count
 
-def monte_carlo_control_eg(g: WindyGridworld,
-                    policy: Policy,
-                    Q: ActionValueTable,
-                    sample_counts: SampleCountTable,
-                    state_sample_first_visit_counts: StateSampleCounts,
-                    state_visit_counts: StateSampleCounts,
-                    gamma: float = 0.9,
-                    num_runs: int = 10000,
-                    max_steps: int = 100) -> list[float]:
-    """
-    Performs Monte Carlo control using an epsilon-greedy policy for the WindyGridworld
-    environment. This function iteratively improves the action-value function Q and the
-    corresponding policy using sample episodes.
-
-    Monte Carlo control is a reinforcement learning method that uses sample episodes
-    to estimate the action-value function and improve the policy over time. The algorithm
-    discounts future rewards based on the gamma parameter and uses sample counts to
-    ensure that learning is based on proper state-action pair visitation frequencies.
-
-    Args:
-        g: WindyGridworld instance representing the environment in which the agent interacts.
-        policy: Policy object that determines the agent's actions given a state.
-        Q: ActionValueTable object mapping state-action pairs to their estimated values.
-        sample_counts: SampleCountTable object tracking the frequency of visits
-            to each state-action pair.
-        state_sample_first_visit_counts: StateSampleCounts object tracking the total
-            number of initial visits to each state.
-        gamma: Discount factor for future rewards. Must be a float between 0 and 1.
-        num_runs: Number of iterations for the learning process. Must be a positive integer.
-        max_steps: Maximum number of steps the agent is allowed per episode. Must be a
-            positive integer.
-
-    Returns:
-        list[float]: A list of maximum Q-value changes for each iteration of the learning
-        process. This can be used for analysis or convergence plotting.
-
-    Raises:
-        ValueError: If the `gamma` parameter is not between 0 and 1.
-        ValueError: If the `num_runs` parameter is not a positive integer.
-        ValueError: If the `max_steps` parameter is not a positive integer.
-    """
-    # Initialize the changes in Q values as a list - to be used for plotting
-    changes: List[float] = []
-
+def _validate_monte_carlo_control_inputs(
+    gamma: float,
+    num_runs: int,
+    max_steps: int,
+) -> None:
+    """Validate Monte Carlo control hyperparameters."""
     if not 0.0 <= gamma <= 1.0:
         raise ValueError("Discount factor must be between 0 and 1.")
     if num_runs <= 0:
         raise ValueError("Number of runs must be a positive integer.")
     if max_steps <= 0:
         raise ValueError("Maximum steps must be a positive integer.")
-    for it in range(num_runs):
-        max_change: float = 0
-        states, actions, rewards = play_episode(g, policy, state_visit_counts, start_state=START_STATE, max_steps=max_steps)
-        states_actions = list(zip(states[:-1], actions))
 
-        first_visit_indices: Dict[Tuple[State, Action], int] = {}
-        for t, (s, a) in enumerate(states_actions):
-            if (s, a) not in first_visit_indices:
-                first_visit_indices[(s, a)] = t
 
-        G: float = 0.0
+def _get_first_visit_indices(
+    state_actions: List[Tuple[State, Action]],
+) -> Dict[Tuple[State, Action], int]:
+    """Return the first index at which each state-action pair appears."""
+    first_visit_indices: Dict[Tuple[State, Action], int] = {}
+    for index, state_action in enumerate(state_actions):
+        if state_action not in first_visit_indices:
+            first_visit_indices[state_action] = index
+    return first_visit_indices
 
-        for t in range(len(states_actions) - 1, -1, -1):
-            s, a = states_actions[t]
-            r = rewards[t]
 
-            # Update G i.e., return
-            G = r + gamma * G
+def _update_first_visit_estimate(
+    state: State,
+    action: Action,
+    return_value: float,
+    policy: Policy,
+    Q: ActionValueTable,
+    sample_counts: SampleCountTable,
+    state_sample_first_visit_counts: StateSampleCounts,
+) -> float:
+    """Update the first-visit estimate for a state-action pair and return the change."""
+    q_old = Q[state][action]
+    sample_counts[state][action] += 1
+    Q[state][action] = q_old + (return_value - q_old) / sample_counts[state][action]
 
-            # Check if this is the first visit to this state-action pair
+    best_action, _ = get_max_key_value(Q[state])
+    policy[state] = best_action
+    state_sample_first_visit_counts[state] += 1
 
-            if first_visit_indices[(s, a)] == t:
-                q_old: float = Q[s][a]
-                sample_counts[s][a] += 1
-                Q[s][a] = q_old + (1 / sample_counts[s][a]) * (G - q_old)
+    return abs(Q[state][action] - q_old)
 
-                # Update policy
-                best_action, _ = get_max_key_value(Q[s])
-                policy[s] = best_action
 
-                # Update state sample count
-                state_sample_first_visit_counts[s] += 1
+def monte_carlo_control_eg(
+    g: WindyGridworld,
+    policy: Policy,
+    Q: ActionValueTable,
+    sample_counts: SampleCountTable,
+    state_sample_first_visit_counts: StateSampleCounts,
+    truncated_count: int,
+    terminated_count: int,
+    state_visit_counts: StateSampleCounts,
+    gamma: float = 0.9,
+    num_runs: int = 10000,
+    max_steps: int = 100,
+) -> tuple[list[float], int, int]:
+    """
+    Performs the Monte Carlo Control with an epsilon-greedy approach to optimize the policy
+    for the given environment. The method estimates action-value functions (Q-values) and
+    updates the policy iteratively to converge to an optimal policy.
 
-                # Update change
-                max_change = max(max_change, abs(Q[s][a] - q_old))
+    Args:
+        g (WindyGridworld): The environment in which the agent operates.
+        policy (Policy): The current policy being evaluated and improved.
+        Q (ActionValueTable): The action-value table containing estimates for state-action pairs.
+        sample_counts (SampleCountTable): Tracks the number of times each state-action pair
+            has been sampled.
+        state_sample_first_visit_counts (StateSampleCounts): Stores the count of first-visit
+            occurrences for each state.
+        truncated_count (int): Counter for episodes that were truncated due to exceeding
+            the maximum step limit.
+        terminated_count (int): Counter for episodes that successfully terminated in the
+            environment's terminal state.
+        state_visit_counts (StateSampleCounts): Records the cumulative count of visits
+            for each state.
+        gamma (float, optional): Discount factor representing the weight of future rewards
+            in the return calculation. Must be between 0 and 1. Defaults to 0.9.
+        num_runs (int, optional): Number of Monte Carlo iterations to perform. Must be a
+            positive integer. Defaults to 10000.
+        max_steps (int, optional): Maximum steps allowed per episode. Must be a positive
+            integer. Defaults to 100.
 
-        # print(f"Iteration {it + 1}: Max Change = {max_change:.4f}")
+    Returns:
+        tuple[list[float], int, int]: A tuple containing:
+            - A list of floats representing the maximum value changes in Q for each iteration
+              (useful for convergence analysis).
+            - An integer representing the total count of truncated episodes.
+            - An integer representing the total count of successfully terminated episodes.
+
+    Raises:
+        ValueError: If `gamma` is not between 0 and 1.
+        ValueError: If `num_runs` is not a positive integer.
+        ValueError: If `max_steps` is not a positive integer.
+    """
+    _validate_monte_carlo_control_inputs(gamma, num_runs, max_steps)
+
+    changes: List[float] = []
+    for _ in range(num_runs):
+        max_change = 0.0
+        states, actions, rewards, truncated_count, terminated_count = play_episode(
+            g,
+            policy,
+            state_visit_counts,
+            truncated_count,
+            terminated_count,
+            start_state=START_STATE,
+            max_steps=max_steps,
+        )
+        state_actions = list(zip(states[:-1], actions))
+        first_visit_indices = _get_first_visit_indices(state_actions)
+
+        return_value = 0.0
+        for index in range(len(state_actions) - 1, -1, -1):
+            state, action = state_actions[index]
+            reward = rewards[index]
+            return_value = reward + gamma * return_value
+
+            if first_visit_indices[(state, action)] != index:
+                continue
+
+            change = _update_first_visit_estimate(
+                state,
+                action,
+                return_value,
+                policy,
+                Q,
+                sample_counts,
+                state_sample_first_visit_counts,
+            )
+            max_change = max(max_change, change)
 
         changes.append(max_change)
-    return changes
+
+    return changes, truncated_count, terminated_count
 
 def plot_changes(changes: List[float]) -> None:
     """
@@ -362,9 +423,13 @@ def plot_changes(changes: List[float]) -> None:
     plt.ylabel('Max Change')
     plt.title('Convergence of Monte Carlo Epsilon-Greedy')
 
-    # Avoid non-interactive backend warnings in headless runs (e.g., Agg backend).
+    # Show interactively on GUI backends, save on headless/non-interactive backends.
     backend = plt.get_backend().lower()
-    if 'agg' in backend:
+    non_interactive_backends = {"agg", "pdf", "pgf", "ps", "svg", "template", "cairo"}
+    if backend in non_interactive_backends or backend.startswith("module://matplotlib_inline"):
+        output_path = "mc_eg_convergence.png"
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
+        print(f"Saved convergence plot to {output_path} (backend={backend}).")
         plt.close()
     else:
         plt.show()
@@ -442,7 +507,13 @@ def main() -> None:
     """
     # Create the gridworld environment
     rows, cols = GRID_SIZE
-    grid: WindyGridworld = negative_reward_gridworld(rows, cols, START_STATE, TERMINAL_STATES, step_cost=STEP_COST)
+    grid: WindyGridworld = negative_reward_gridworld(
+        rows,
+        cols,
+        START_STATE,
+        TERMINAL_STATES,
+        step_cost=STEP_COST,
+    )
 
     # Initialize the policy
     policy: Policy = dict(create_random_policy(grid))
@@ -450,14 +521,25 @@ def main() -> None:
     print_policy(policy, grid)
     print()
 
-    # Play an episode
-    Q, sample_counts, state_sample_first_visit_counts, state_visit_count = initialize_values_returns(grid)
-    changes = monte_carlo_control_eg(
+    # Initialize values and returns
+    (
+        Q,
+        sample_counts,
+        state_sample_first_visit_counts,
+        state_visit_count,
+        truncated_count,
+        terminated_count,
+    ) = initialize_values_returns(grid)
+
+    # Run Monte Carlo control with epsilon-greedy policy improvement
+    changes, truncated_count, terminated_count = monte_carlo_control_eg(
         grid,
         policy,
         Q,
         sample_counts,
         state_sample_first_visit_counts,
+        truncated_count,
+        terminated_count,
         state_visit_count,
         gamma=0.9,
         num_runs=10_000,
@@ -477,13 +559,19 @@ def main() -> None:
     print()
 
     print("Final state_sample_first_visit_counts:")
-    state_sample_counts_arr: np.ndarray = np.zeros((grid.rows, grid.cols))
+    state_sample_counts_rows: List[List[int]] = []
     for i in range(grid.rows):
+        row: List[int] = []
         for j in range(grid.cols):
-            state_sample_counts_arr[i, j] = state_sample_first_visit_counts.get((i, j), 0)
+            row.append(state_sample_first_visit_counts.get((i, j), 0))
+        state_sample_counts_rows.append(row)
 
-    df: pd.DataFrame = pd.DataFrame(state_sample_counts_arr)
-    print(df)
+    for row in state_sample_counts_rows:
+        print(row)
+
+    print()
+    print(f"Total Truncated Episodes: {truncated_count}")
+    print(f"Total Terminated Episodes: {terminated_count}")
 
     # print ("Final action_sample_counts:")
     # print_action_sample_counts(sample_counts, grid)
