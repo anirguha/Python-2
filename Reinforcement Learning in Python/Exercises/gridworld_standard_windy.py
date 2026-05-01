@@ -271,6 +271,20 @@ class WindyGridworld:
         return set(self.actions.keys()) | set(self.rewards.keys()) | set(self.terminal_states)
 
     @overload
+    def get_action_space(self) -> ActionMap:
+        """
+        Returns the action space configuration for the current environment.
+
+        This method retrieves and provides a mapping of possible actions that an
+        agent can perform in the environment, allowing for interaction and exploration
+        of the environment's available operations.
+
+        Returns:
+            ActionMap: A mapping of the defined actions available in the environment.
+        """
+        ...
+
+    @overload
     def get_action_space(self, state: State) -> ActionSpace:
         """
         Retrieves the action space for the given state.
@@ -288,7 +302,7 @@ class WindyGridworld:
         """
         ...
     @overload
-    def get_action_space(self, state: None) -> ActionMap:
+    def get_action_space(self, state: None = None) -> ActionMap:
         """
         Determines the appropriate action space based on the provided state.
 

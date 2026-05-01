@@ -111,7 +111,7 @@ def sarsa(g: WindyGridworld,
     Q = initialize_action_values(g)
     states = g.get_all_states()
 
-    # Variable to track the  number of times Q[s] has been updated
+    # Variable to track the number of times Q[s] has been updated
     update_counts: StateSampleCounts = {}
     for s in states:
         update_counts[s] = 0
@@ -172,7 +172,7 @@ def plot_sarsa_results(reward_per_episode: List[float]) -> None:
     plt.plot(reward_per_episode, 'b-', label='Episode Reward')
     plt.xlabel('Episode')
     plt.ylabel('Reward')
-    plt.title('Sarsa Reward per Episode')
+    plt.title('SARSA Reward per Episode')
     plt.legend()
     plt.show()
 
