@@ -1,5 +1,5 @@
 from random import choice, shuffle
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, List, Tuple, cast
 
 from gridworld_standard_windy import (
     WindyGridworld,
@@ -50,7 +50,7 @@ def play_episode(
     """
     # Returns a list of states and rewards from the current state
     # start at random state and play the episode until max_steps or episode ends
-    action_map = grid.get_action_space()
+    action_map: Dict[State, Tuple[Action, ...]] = cast(Dict[State, Tuple[Action, ...]], grid.get_action_space())
     start_states: List[State] = list(action_map.keys())
     start_state: State = choice(start_states)
     grid.set_state(start_state)
@@ -128,7 +128,7 @@ def create_random_policy(g: WindyGridworld) -> Iterator[Tuple[State, Action]]:
     Yields:
         A tuple containing a state and a randomly selected action for that state.
     """
-    action_map = g.get_action_space()
+    action_map: Dict[State, Tuple[Action, ...]] = cast(Dict[State, Tuple[Action, ...]], g.get_action_space())
     states: List[State] = list(action_map.keys())
     shuffle(states) # Shuffle the states to randomize the order of actions
 
@@ -160,7 +160,7 @@ def initialize_values_returns(g: WindyGridworld) -> tuple[ActionValueTable, Samp
     Q: ActionValueTable = {}
     sample_counts: SampleCountTable = {}
 
-    action_map = g.get_action_space()
+    action_map = cast(Dict[State, Tuple[Action, ...]], g.get_action_space())
     for s, available_actions in action_map.items():
         Q[s] = {}
         sample_counts[s] = {}

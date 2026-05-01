@@ -3,8 +3,8 @@ from typing import Dict, List, Tuple, cast
 
 from gridworld_standard_windy import (
     WindyGridworld,
-    # standard_gridworld,
-    negative_reward_gridworld,
+    standard_gridworld,
+    # negative_reward_gridworld,
     # assign_random_terminal_rewards,
     State
 )
@@ -92,8 +92,7 @@ def td_prediction(
 
     # Initialize environment
     rows, cols = GRID_SIZE
-    # g = standard_gridworld(rows, cols, START_STATE, terminal_states=TERMINAL_STATES)
-    g = negative_reward_gridworld(rows, cols, START_STATE, terminal_states=TERMINAL_STATES, step_cost=STEP_COST)
+    g = standard_gridworld(rows, cols, START_STATE, terminal_states=TERMINAL_STATES)
 
     print("Initial policy")
     print_policy(policy, g)
