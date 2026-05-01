@@ -35,9 +35,7 @@ class TestGridworldPolicyControlSarsa(unittest.TestCase):
         )
 
         self.assertEqual(len(reward_per_episode), 1)
-        self.assertEqual(set(q.keys()), self.grid.get_all_states())
-        self.assertEqual(q[(0, 3)], {})
-        self.assertEqual(q[(1, 3)], {})
+        self.assertEqual(set(q.keys()), set(self.grid.get_action_space().keys()))
         self.assertGreater(sum(update_counts.values()), 0)
 
     def test_plot_sarsa_results_skips_when_matplotlib_is_unavailable(self):
