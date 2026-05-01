@@ -83,30 +83,29 @@ def epsilon_greedy(
 def play_episode(
     grid: WindyGridworld,
     policy: Policy,
+    state_visit_counts: StateSampleCounts, # Denotes the number of times a state has been visited
     start_state: State = START_STATE,
     max_steps: int = 100,
 ) -> Tuple[List[State], List[Action], List[Reward]]:
     """
-    Runs a single episode of interaction between an agent and the gridworld
-    environment using a given policy. The agent starts at a specified state
-    and follows the policy until the episode ends or a maximum number of
-    steps is reached. The episode captures a sequence of states, actions,
-    and rewards.
+    Simulates an episode in the WindyGridworld environment using a given policy to guide
+    the agent's actions, starting from a defined state, and records the outcomes.
 
     Args:
-        grid: The WindyGridworld environment that defines the state space,
-            actions, and rules of the environment.
-        policy: The policy used by the agent to select actions. It defines
-            the mapping from state to actions using an epsilon-greedy approach.
-        start_state: The initial state where the agent begins the episode. Defaults
-            to the constant START_STATE.
-        max_steps: The maximum number of steps allowed in the episode. Defaults to 100.
+        grid: The WindyGridworld environment to navigate during the episode.
+        policy: The policy dictating the agent's actions in each state.
+        state_visit_counts: A mapping that tracks the number of visits to each state
+            during the simulation.
+        start_state: The initial state where the agent starts the episode. Defaults
+            to START_STATE.
+        max_steps: The maximum number of steps the agent is allowed to take during
+            the episode.
 
     Returns:
-        A tuple containing the following:
-            - A list of states visited during the episode.
-            - A list of actions taken during the episode.
-            - A list of rewards received during the episode.
+        A tuple containing:
+          - A list of states visited during the episode.
+          - A list of actions taken during the episode.
+          - A list of rewards received during the episode.
     """
     action_map: Dict[State, Tuple[Action, ...]] = cast(
         Dict[State, Tuple[Action, ...]],
@@ -116,6 +115,7 @@ def play_episode(
     # Initialize the grid and start state
     grid.set_state(start_state)
     s = start_state
+    state_visit_counts[s] += 1
 
     # Choose an epsilon greedy action
     a: Action = epsilon_greedy(policy, s, action_map)
@@ -136,6 +136,7 @@ def play_episode(
         rewards.append(r)
 
         steps += 1
+        state_visit_counts[s] += 1
 
         if grid.end_episode():
             break
@@ -194,29 +195,41 @@ def create_random_policy(g: WindyGridworld) -> Iterator[Tuple[State, Action]]:
         action = choice(available_actions)
         yield s, action
 
-def initialize_values_returns(g: WindyGridworld) -> tuple[ActionValueTable, SampleCountTable, StateSampleCounts]:
+def initialize_values_returns(g: WindyGridworld) -> tuple[
+    ActionValueTable, SampleCountTable, StateSampleCounts, StateSampleCounts]:
     """
-    Initialize Q-values and sample counts for all states and actions in the provided WindyGridworld.
+    Initializes the action-value function (Q), sample counts for state-action pairs,
+    first-visit counts for states, and overall state visit counts for a given
+    WindyGridworld environment.
 
-    This function initializes two data structures used in reinforcement learning: a dictionary
-    to store Q-values for state-action pairs and another dictionary to keep sample counts for
-    state-action pairs. Terminal states in the gridworld are skipped.
+    This function sets up the foundational data structures required for reinforcement
+    learning algorithms by preparing the action-value table and other tracking
+    dictionaries. Each state-action pair is initialized with default values, and
+    visit counts are set to zero.
 
     Args:
-        g (WindyGridworld): The WindyGridworld environment containing states, actions, and
-            terminal conditions.
+        g (WindyGridworld): The WindyGridworld instance specifying the environment,
+            its state space, and the available actions.
 
     Returns:
-        Tuple[Dict[State, Reward], Dict[State, List[Reward]]]: A tuple containing:
-            - A dictionary mapping each non-terminal state to its actions with initialized Q-values.
-            - A dictionary mapping each state to its list of actions with initialized sample counts.
+        tuple[ActionValueTable, SampleCountTable, StateSampleCounts, StateSampleCounts]:
+            A tuple containing:
+            - Q: ActionValueTable where each state's actions are initialized to 0.0.
+            - sample_counts: A table to track the number of times each state-action
+              pair is visited.
+            - state_sample_first_visit_counts: A dictionary tracking the first-visit
+              count of each state.
+            - state_visit_counts: A dictionary tracking the total visit count of each
+              state.
     """
     # Initialize Q(s,a) and returns all states and actions
     Q: ActionValueTable = {}
     sample_counts: SampleCountTable = {}
     state_sample_first_visit_counts: StateSampleCounts = {}
+    state_visit_counts: StateSampleCounts = {}
 
     action_map = cast(Dict[State, Tuple[Action, ...]], g.get_action_space())
+    all_states = g.get_all_states()
     for s, available_actions in action_map.items():
         Q[s] = {}
         sample_counts[s] = {}
@@ -225,13 +238,17 @@ def initialize_values_returns(g: WindyGridworld) -> tuple[ActionValueTable, Samp
             Q[s][a] = 0.0
             sample_counts[s][a] = 0
 
-    return Q, sample_counts, state_sample_first_visit_counts
+    for s in all_states:
+        state_visit_counts[s] = 0
+
+    return Q, sample_counts, state_sample_first_visit_counts, state_visit_counts
 
 def monte_carlo_control_eg(g: WindyGridworld,
                     policy: Policy,
                     Q: ActionValueTable,
                     sample_counts: SampleCountTable,
                     state_sample_first_visit_counts: StateSampleCounts,
+                    state_visit_counts: StateSampleCounts,
                     gamma: float = 0.9,
                     num_runs: int = 10000,
                     max_steps: int = 100) -> list[float]:
@@ -278,7 +295,7 @@ def monte_carlo_control_eg(g: WindyGridworld,
         raise ValueError("Maximum steps must be a positive integer.")
     for it in range(num_runs):
         max_change: float = 0
-        states, actions, rewards = play_episode(g, policy, start_state=START_STATE, max_steps=max_steps)
+        states, actions, rewards = play_episode(g, policy, state_visit_counts, start_state=START_STATE, max_steps=max_steps)
         states_actions = list(zip(states[:-1], actions))
 
         first_visit_indices: Dict[Tuple[State, Action], int] = {}
@@ -378,6 +395,24 @@ def print_action_sample_counts(sample_counts: SampleCountTable, g: WindyGridworl
     print_values(state_totals, g)
     return None
 
+def print_state_sample_counts(sample_counts: StateSampleCounts, g: WindyGridworld) -> None:
+    """
+    Prints total sample counts for each state in the gridworld.
+
+    Args:
+        sample_counts (StateSampleCounts): A dictionary mapping states to visit counts.
+        g (WindyGridworld): The gridworld environment used for rendering the counts.
+
+    Returns:
+        None
+    """
+    state_totals: Dict[State, float] = {
+        state: float(count)
+        for state, count in sample_counts.items()
+    }
+    print_values(state_totals, g)
+    return None
+
 def get_state_values_from_q(Q: ActionValueTable) -> Dict[State, Reward]:
     """
     Convert an action-value table into state values using V(s) = max_a Q(s, a).
@@ -416,13 +451,14 @@ def main() -> None:
     print()
 
     # Play an episode
-    Q, sample_counts, state_sample_first_visit_counts = initialize_values_returns(grid)
+    Q, sample_counts, state_sample_first_visit_counts, state_visit_count = initialize_values_returns(grid)
     changes = monte_carlo_control_eg(
         grid,
         policy,
         Q,
         sample_counts,
         state_sample_first_visit_counts,
+        state_visit_count,
         gamma=0.9,
         num_runs=10_000,
     )
@@ -434,6 +470,10 @@ def main() -> None:
 
     print("Final State Values:")
     print_values(get_state_values_from_q(Q), grid)
+    print()
+
+    print("Final state_visit_counts:")
+    print_state_sample_counts(state_visit_count, grid)
     print()
 
     print("Final state_sample_first_visit_counts:")
