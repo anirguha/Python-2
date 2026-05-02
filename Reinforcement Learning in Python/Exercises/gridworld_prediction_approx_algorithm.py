@@ -72,7 +72,7 @@ def collect_samples(p: Policy,
 
     return samples
 
-class Approximation:
+class ValueFunctionApproximator:
     def __init__(self,
                  p: Policy,
                  g: WindyGridworld,
@@ -102,14 +102,14 @@ class Approximation:
         x = self.sampler.transform([s])[0]
         return x
 
-def run_approx(p: Policy,
+def run_td0_value_approximation(p: Policy,
                g: WindyGridworld,
                num_samples: int,
                epsilon: float,
                lr: float,
                gamma: float,
-               num_iterations: int) -> Tuple[List[float], Approximation]:
-    approx = Approximation(p, g, num_samples, epsilon, lr, gamma)
+               num_iterations: int) -> Tuple[List[float], ValueFunctionApproximator]:
+    approx = ValueFunctionApproximator(p, g, num_samples, epsilon, lr, gamma)
     mse_per_episode: List[float] = []
 
     for _ in range(num_iterations):
@@ -128,7 +128,7 @@ def run_approx(p: Policy,
 
             if g.is_terminal(s_next):
                 target = r
-                Vs_next = r
+                Vs_next = 0.0
             else:
                 Vs_next = approx.predict(s_next)
                 target = r + gamma * Vs_next
@@ -144,13 +144,15 @@ def run_approx(p: Policy,
             # Update state
             s = s_next
             Vs = Vs_next
-
-        mse_per_episode.append(episode_err / n_steps)
+        if n_steps > 0:
+            mse_per_episode.append(episode_err / n_steps)
+        else:
+            mse_per_episode.append(0.0)
 
     return mse_per_episode, approx
 
 
-def get_predicted_state_values(g: WindyGridworld, approx: Approximation) -> ValueTable:
+def get_predicted_state_values(g: WindyGridworld, approx: ValueFunctionApproximator) -> ValueTable:
     """Build V(s) from the trained approximator for all known states."""
     values: ValueTable = {}
     for s in g.get_all_states():
@@ -166,6 +168,7 @@ def plot_mse(mse_per_episode: List[float]) -> None:
     plt.title("MSE per episode")
     backend = plt.get_backend().lower()
     if 'agg' in backend:
+        plt.savefig('mse_per_episode.png')
         plt.close()
     else:
         plt.show()
@@ -189,7 +192,7 @@ def main() -> None:
     gamma: float = 0.9
     num_iterations: int = 10000
 
-    mse_per_episode, approx = run_approx(p, g, num_samples, epsilon, lr, gamma, num_iterations)
+    mse_per_episode, approx = run_td0_value_approximation(p, g, num_samples, epsilon, lr, gamma, num_iterations)
     plot_mse(mse_per_episode)
 
     print("Final Policy:")
