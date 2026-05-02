@@ -1,10 +1,10 @@
 import math
 import random
-from typing import Dict, KeysView, List, Optional, Set, Tuple, overload
+from typing import Dict, KeysView, List, Optional, Set, Tuple, overload, Literal, cast
 
 
 State = Tuple[int, int]
-Action = str
+Action = Literal['U', 'D', 'L', 'R']
 ActionSpace = Tuple[Action, ...]
 ActionMap = Dict[State, ActionSpace]
 Policy = Dict[State, Dict[Action, float]]
@@ -138,13 +138,14 @@ class WindyGridworld:
                 raise ValueError(
                     f"Terminal state {state} cannot have available actions."
                 )
-            normalized_actions[state] = tuple(available_actions)
+            normalized_actions[state] = _actions(*available_actions)
 
         for state in rewards:
             self._validate_state(state)
 
         normalized_probs: TransitionProbs = {}
         for (state, action), next_state_probs in probs.items():
+            action = _as_action(action)
             self._validate_state(state)
             if state not in normalized_actions:
                 raise ValueError(
@@ -406,6 +407,16 @@ ACTION_DELTAS: Dict[Action, Tuple[int, int]] = {
 }
 
 
+def _as_action(value: str) -> Action:
+    if value not in ACTION_DELTAS:
+        raise ValueError(f"Invalid action: {value!r}")
+    return cast(Action, value)
+
+
+def _actions(*values: str) -> ActionSpace:
+    return tuple(_as_action(v) for v in values)
+
+
 def _next_state(s: State, a: Action) -> State:
     """
     Determine the next state based on the current state and the given action.
@@ -456,18 +467,18 @@ def standard_gridworld(
         s: default_terminal_rewards.get(s, 0.0) for s in resolved_terminal_states
     }
     all_actions: ActionMap = {
-        (0, 0): ('D', 'R'),
-        (0, 1): ('L', 'R'),
-        (0, 2): ('L', 'D', 'R'),
-        (1, 0): ('U', 'D'),
-        (1, 2): ('U', 'D', 'R'),
-        (2, 0): ('U', 'R'),
-        (2, 1): ('L', 'R'),
-        (2, 2): ('L', 'R', 'U'),
-        (2, 3): ('L', 'U'),
+        (0, 0): _actions('D', 'R'),
+        (0, 1): _actions('L', 'R'),
+        (0, 2): _actions('L', 'D', 'R'),
+        (1, 0): _actions('U', 'D'),
+        (1, 2): _actions('U', 'D', 'R'),
+        (2, 0): _actions('U', 'R'),
+        (2, 1): _actions('L', 'R'),
+        (2, 2): _actions('L', 'R', 'U'),
+        (2, 3): _actions('L', 'U'),
     }
     actions: ActionMap = {
-        s: available_actions
+        s: cast(ActionSpace, available_actions)
         for s, available_actions in all_actions.items()
         if s not in resolved_terminal_states
     }
@@ -476,8 +487,9 @@ def standard_gridworld(
     probs: TransitionProbs = {}
     for s, a_list in actions.items():
         for a in a_list:
-            s2 = _next_state(s, a)
-            probs[(s, a)] = {s2: 1.0}
+            a_typed: Action = cast(Action, a)
+            s2 = _next_state(s, a_typed)
+            probs[(s, a_typed)] = {s2: 1.0}
 
     g.set(rewards, actions, probs)
     return g
@@ -507,7 +519,7 @@ def windy_gridworld(
         in certain grid positions.
     """
     g = standard_gridworld(rows, cols, start, terminal_states=terminal_states)
-    windy_probs = {((1, 2), 'U'): {(0, 2): 0.5, (1, 3): 0.5}}
+    windy_probs = {((1, 2), _as_action('U')): {(0, 2): 0.5, (1, 3): 0.5}}
     g.probs.update(windy_probs)
     return g
 
