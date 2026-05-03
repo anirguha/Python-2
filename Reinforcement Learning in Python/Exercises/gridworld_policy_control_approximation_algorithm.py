@@ -1,14 +1,36 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple, List, Literal, cast
+from typing import Dict, Tuple, List, Literal, cast, Any
 from random import choice, random
 
-import pandas as pd
-from sklearn.kernel_approximation import RBFSampler
-from tqdm import tqdm
+try:
+    import pandas as pd
+except ModuleNotFoundError:
+    pd = None
+
+try:
+    from sklearn.kernel_approximation import RBFSampler
+except ModuleNotFoundError:
+    RBFSampler = None
+
+try:
+    from tqdm import tqdm
+except ModuleNotFoundError:
+    def tqdm(iterable: Any, **_kwargs: Any) -> Any:
+        return iterable
 
 import numpy as np
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ModuleNotFoundError:
+    class _MissingPyplot:
+        def __getattr__(self, name: str) -> Any:
+            raise ModuleNotFoundError(
+                "matplotlib is required for plotting. Install matplotlib to use "
+                f"plt.{name}()."
+            )
+
+    plt = _MissingPyplot()
 
 from gridworld_standard_windy import (
     WindyGridworld,
@@ -137,13 +159,24 @@ def epsilon_greedy(g: WindyGridworld,
         Action: The chosen action for the given state following the specified
         epsilon-greedy policy.
     """
+    if not 0 <= eps <= 1:
+        raise ValueError("Epsilon must be between 0 and 1.")
+
     action_map = g.get_action_space()
+    available_actions = action_map[s]
+    if not available_actions:
+        raise ValueError(f"No available actions for state {s}.")
 
     if random() < (1 - eps):
-        values = model.predict_all_actions(s)
-        return action_map[s][np.argmax(values)]
-    else:
-        return choice(action_map[s])
+        values = np.asarray(model.predict_all_actions(s))[: len(available_actions)]
+        if len(values) < len(available_actions):
+            raise ValueError(
+                f"Model returned {len(values)} values for {len(available_actions)} "
+                f"actions in state {s}."
+            )
+        return available_actions[int(np.argmax(values))]
+
+    return choice(available_actions)
 
 
 # =======================
@@ -208,6 +241,12 @@ class ValueFunctionApproximator:
             num_samples (int): The number of samples to collect for RBF-feature mapping.
         """
         self.g = g
+
+        if RBFSampler is None:
+            raise ModuleNotFoundError(
+                "scikit-learn is required for ValueFunctionApproximator. "
+                "Install scikit-learn to run q-learning with function approximation."
+            )
 
         self.action_map = g.get_action_space()
         self.action_index, self.action_onehot = _build_action_encoding(self.action_map)
@@ -380,7 +419,7 @@ def plot_reward_per_episode(rewards: List[float]):
     plt.xlabel("Episode")
     plt.ylabel("Reward")
 
-    if 'agg' in plt.get_backend().lower():
+    if plt.get_backend().lower() == 'agg':
         plt.savefig('reward_per_episode.png')
         plt.close()
     else:
@@ -491,7 +530,30 @@ def get_state_sample_counts(state_visit_count: StateSampleCounts):
     for (i, j), count in state_visit_count.items():
         arr[i, j] = count
 
-    return pd.DataFrame(arr)
+    if pd is not None:
+        return pd.DataFrame(arr)
+
+    return _SimpleDataFrame(arr)
+
+
+class _SimpleILoc:
+    def __init__(self, values: np.ndarray) -> None:
+        self._values = values
+
+    def __getitem__(self, index: Tuple[int, int]) -> float:
+        return float(self._values[index])
+
+
+class _SimpleDataFrame:
+    """Small fallback for tests when pandas is unavailable."""
+
+    def __init__(self, values: np.ndarray) -> None:
+        self._values = values
+        self.iloc = _SimpleILoc(values)
+
+    @property
+    def shape(self) -> Tuple[int, int]:
+        return cast(Tuple[int, int], self._values.shape)
 
 
 # =======================

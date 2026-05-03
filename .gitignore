@@ -119,12 +119,21 @@ dmypy.json
 cython_debug/
 
 # ─── IDE / editors ────────────────────────────────────────
+.idea/
+.idea 2/
+.vscode/
+.vs/
 .spyderproject
 .spyproject
 .ropeproject
 .abstra/
 .cursorignore
 .cursorindexingignore
+
+# ─── Local credentials ────────────────────────────────────
+Google Connector/*.json
+**/*service-account*.json
+**/*credentials*.json
 
 # ─── Docs ─────────────────────────────────────────────────
 /site
