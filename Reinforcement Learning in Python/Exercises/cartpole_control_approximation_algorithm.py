@@ -129,7 +129,7 @@ def run_episode_sampling_training(
         episode_reward += float(r)
 
         if sampling_training == "training":
-            if Model is None:
+            if MODEL is None:
                 raise ValueError("MODEL must be initialized before training.")
             if done or truncated:
                 target = float(r)
@@ -182,7 +182,7 @@ def collect_samples(env: gymnasium.Env, max_samples: int) -> Samples:
         pbar.update(len(samples))
 
     pbar.close()
-    return all_samples
+    return all_samples[:max_samples]
 
 
 # =======================
