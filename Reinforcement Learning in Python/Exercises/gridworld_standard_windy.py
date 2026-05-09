@@ -19,27 +19,31 @@ ValueTable = Dict[State, float]
 
 class WindyGridworld:
     """
-    Represents a gridworld environment with wind dynamics for reinforcement learning
-    applications.
+    Represents a windy gridworld environment with states, actions, rewards,
+    and transition dynamics.
 
-    The WindyGridworld simulates a grid-based environment where an agent navigates
-    to reach terminal states while encountering stochastic transitions. The grid is
-    initialized with specific dimensions, a starting state, and terminal states. Actions,
-    rewards, and transitions must be configured before the environment can be used
-    for decision-making tasks.
+    This class models a grid-based reinforcement learning environment where
+    an agent navigates through a grid of states. The environment supports
+    configurable rewards, actions, and probabilistic state transitions. The
+    gridworld includes terminal states where episodes end, and requires
+    explicit configuration of rewards, actions, and transition probabilities
+    before use. The environment validates all states to ensure they fall
+    within the defined grid boundaries and enforces proper configuration
+    before allowing interactions.
 
     Attributes:
         rows (int): Number of rows in the grid.
-        Cols (int): Number of columns in the grid.
-        Start (State): Starting state of the agent, represented as a tuple (row, column).
-        Terminal_states (List[State]): List of terminal states where the environment
-            episode ends.
-        Probs (TransitionProbs): Transition probabilities define the likelihood of moving
-            between states given an action.
-        Actions (ActionMap): Mapping of states to the list of available actions from each
-            state.
-        Rewards (StateRewardTable): Reward structure defining the rewards received for
-            reaching specific states.
+        cols (int): Number of columns in the grid.
+        start (State): Initial state of the agent represented as coordinates.
+        terminal_states (List[State]): List of states where episodes terminate.
+        i (int): Current row position of the agent.
+        j (int): Current column position of the agent.
+        probs (TransitionProbs): Dictionary mapping (state, action) pairs to
+            probability distributions over next states.
+        actions (ActionMap): Dictionary mapping states to sets of available
+            actions.
+        rewards (StateRewardTable): Dictionary mapping states to their
+            associated reward values.
     """
     def __init__(
             self,

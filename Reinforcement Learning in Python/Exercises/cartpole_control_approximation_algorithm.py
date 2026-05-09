@@ -288,47 +288,29 @@ def run_episode_sampling_training(
         max_steps: Optional[int] = DEFAULT_MAX_STEPS_PER_EPISODE,
         bootstrap_on_truncation: bool = True,
 ) -> Tuple[float, Samples, Optional[float]]:
-    """Execute a single episode with optional sample collection or online training.
-
-    This is the core simulation loop. Depending on the `sampling_training` mode,
-    the function can:
-    - Collect state-action pairs for offline feature fitting
-    - Train a model online using Q-learning with function approximation
-    - Run an episode without special processing
-
-    In training mode, Q-learning updates are applied:
-        Q(s, a) ← Q(s, a) + lr * (target - Q(s, a)) * grads(s, a)
-    where target = r + gamma * max_a' Q(s', a') if the episode continues,
-    or target = r if terminal.
+    """
+    Runs an episode of the given environment using the specified action selector, training, or sampling mode. Supports
+    optional training of a value function approximator model using Q-learning principles, with optional bootstrapping for
+    truncated episodes. This function is designed for customization of reinforcement learning workflows.
 
     Args:
-        env: Gymnasium-style environment.
-        action_selector: Optional callable that maps state → action. If None,
-                        random actions are sampled.
-        sampling_training: Mode of operation:
-            - None: Run the episode without special processing.
-            - "sampling": Collect state-action pairs.
-            - "training": Apply Q-learning updates during the episode.
-        model: Value-function model for training/evaluation. Falls back to
-               global MODEL if not provided.
-        gamma: Discount factor in [0, 1] for future reward weighting.
-        lr: Positive learning rate for gradient-descent updates.
-        seed: Optional seed for environment reset.
-        max_steps: Optional cap on episode length. If reached, the episode is
-                  marked as truncated.
-        bootstrap_on_truncation: If False, treat truncation as terminal
-                                (target = r). If True, use bootstrap
-                                (target = r + gamma * max_a Q(s', a')).
+        env: The environment in which the episode will be executed.
+        action_selector: A callable that selects an action based on the current state. Defaults to random sampling from the
+            action space if not provided.
+        sampling_training: Specifies the mode of operation - 'sampling' to collect state-action samples, 'training' to update
+            the model via Q-learning, or None for evaluation without training or sampling.
+        model: An optional value function approximator model used for Q-learning updates when in training mode.
+        gamma: The discount factor for future rewards. Must be between 0 and 1.
+        lr: The learning rate for the model updates when in training mode. Must be positive.
+        seed: An optional random seed to ensure reproducibility for environment resets and action selection.
+        max_steps: The maximum number of steps to execute in the episode before forcing truncation. Must be positive if
+            specified.
+        bootstrap_on_truncation: Whether to bootstrap the target value when the episode is truncated before reaching a
+            terminal state.
 
     Returns:
-        A tuple of:
-        - episode_reward (float): Total reward accumulated in the episode.
-        - samples (Samples): State-action pairs (empty if not in sampling mode).
-        - target (Optional[float]): Final Q-learning target value (None if not
-                                   in training mode).
-
-    Raises:
-        ValueError: If parameters are invalid, or a model is required but missing.
+        Tuple[float, Samples, Optional[float]]: A tuple containing the total reward for the episode, a collection of
+        sampled state-action pairs if in sampling mode, and the final target value from Q-learning if in training mode.
     """
     # Validate hyperparameters
     if not 0 <= gamma <= 1:
