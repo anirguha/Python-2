@@ -45,6 +45,7 @@ GRADIENT_CLIP_NORM: float = 10.0
 MOMENTUM: float = 0.9
 RANDOM_SEED: int = 123
 TRADE_FRACTION: float = 0.25 # Percentages of the stock that can be sold/ cash that can be invested in one step
+STOCK_TICKERS: List[str] = ["AAPL", "MSI", "SBUX", "CASH"]
 # ---------------------------
 # Type Aliases and Protocols
 # ---------------------------
@@ -722,7 +723,7 @@ class TradingEnvironment:
         ensure sufficient cash is available for purchases.
 
         Args:
-            action: The index representing the trading action to execute, must be
+            action: The index representing the trading action to execute must be
                 within the valid action space.
 
         Raises:
@@ -1231,9 +1232,13 @@ def evaluate_agent(
     initial_value: float = portfolio_values[0]
     total_return_pct: float = (final_portfolio_value / initial_value - 1.0) * 100.0
 
+
+    final_stock_holdings: List[Tuple[str, int]] = [(ticker, int(amount)) for ticker, amount in zip(STOCK_TICKERS, np.concat([env.stock_owned, [env.cash_in_hand]]))]
+
     print("\nEvaluation Summary:")
     print(f"  Initial Portfolio Value: {initial_value:,.2f}")
     print(f"  Final Portfolio Value: {final_portfolio_value:,.2f}")
+    print(f"  Final Stock Holdings: {final_stock_holdings}")
     print(f"  Best Portfolio Value: {np.max(portfolio_values):,.2f}")
     print(f"  Worst Portfolio Value: {np.min(portfolio_values):,.2f}")
     print(f"  Total Return: {total_return_pct:.2f}%")
@@ -1439,7 +1444,7 @@ def main() -> None:
     """
     args = parse_args()
 
-    np.random.seed(RANDOM_SEED)
+    # np.random.seed(RANDOM_SEED)
 
     data: Data = get_data(args.data_file)
     print(f"Loaded data shape: {data.shape}")
