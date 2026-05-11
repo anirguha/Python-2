@@ -10,6 +10,8 @@ This is a **learning/course repository** containing implementations of ML/AI con
 
 Each topic is in its own top-level directory. Key directories:
 - `Reinforcement Learning in Python/Exercises/` - Primary RL exercise implementations
+- `Reinforcement_Learning_in_Python/Exercises/` - Import-safe compatibility package that exposes the space-named exercises directory
+- `Fundamentals of Reinforcement Learning/rl-fundamentals-reference/` - Separate RL course/reference project with its own `AGENTS.md`, `pyproject.toml`, and `uv.lock`
 - `tests/` - Unit test suite using pytest
 - `Helper Functions/` - Shared utility modules (model saving, image processing, etc.)
 
@@ -43,6 +45,10 @@ grid = negative_reward_gridworld(
 ```
 Key methods: `get_all_states()`, `get_action_space()`, `get_transitions()`, `get_reward()`
 See: `Reinforcement Learning in Python/Exercises/gridworld_monte_carlo_epsilon_greedy.py`
+
+### Tabular TD-Control Pattern
+Q-learning and SARSA modules build action-value tables only from `g.get_action_space()` and update terminal transitions with `td_target = r` before breaking the episode loop. Keep epsilon-greedy guards for invalid epsilon values, unknown states, and states with no available actions because tests assert these edge cases.
+See: `Reinforcement Learning in Python/Exercises/gridworld_policy_control_q_learning_algorithm.py`, `gridworld_policy_control_sarsa.py`, `tests/test_gridworld_policy_control_q_learning.py`, `tests/test_gridworld_policy_control_sarsa.py`
 
 ### Visualization with pretty_printing Module
 Use consistent pretty-printing functions instead of manual printing:
@@ -149,6 +155,8 @@ cd "/Users/AnirbanGuha/Library/CloudStorage/GoogleDrive-guhaa1@gmail.com/My Driv
 pytest tests/ -v
 ```
 
+`pyproject.toml` sets `pythonpath = ["."]` and `testpaths = ["tests"]`, so `pytest -v` from the project root uses the same test path/import setup.
+
 Test files follow convention: `tests/test_<module_name>.py`
 Tests use `unittest.TestCase` with `setUp()` method for common fixtures.
 Mock GridWorld instances with `negative_reward_gridworld()` factory.
@@ -162,13 +170,14 @@ python gridworld_monte_carlo_epsilon_greedy.py
 ```
 
 ### Dependencies
-Core dependencies (see `Reinforcement Learning in Python/Exercises/requirements.txt`):
-- `pytest >= 9.0.0` - Testing framework
+`Reinforcement Learning in Python/Exercises/requirements.txt` currently only pins `pytest>=9.0.0`. Individual exercise scripts import additional libraries as needed:
 - `numpy`, `pandas`, `matplotlib` - Data & visualization
 - `gymnasium` - RL environment interface (CartPole, et al. - modern replacement for gym)
 - `scipy`, `seaborn` - Analysis & plotting
-- `scikit-learn` - ML preprocessing & RBF feature sampling for approximation algorithms
-- `tqdm` - Progress bars (optional, gracefully degraded if not installed)
+- `scikit-learn` - ML preprocessing, `StandardScaler`, and RBF feature sampling for approximation algorithms
+- `tqdm` - Progress bars (optional in some modules, direct import in `trading_linear_qlearning.py`)
+
+The nested `Fundamentals of Reinforcement Learning/rl-fundamentals-reference/` project targets Python 3.11 and manages its own pinned dependencies with `uv` (`uv sync --python 3.11`) or its local `requirements.txt`.
 
 ## Debugging & Common Issues
 
@@ -195,6 +204,8 @@ python -c "from Reinforcement_Learning_in_Python.Exercises import gridworld_stan
 Exercise scripts expect `data/` directory relative to execution directory: 
 Example: `pd.read_csv("data/aapl_msi_sbux.csv")`
 
+`trading_linear_qlearning.py` resolves paths with `Path(__file__).resolve().parent`: default data is `Reinforcement Learning in Python/Exercises/data/aapl_msi_sbux.csv`, and training writes `model/trading_agent.npz` plus `model/trading_scaler.pkl`. Its CLI supports `--mode train|test`, `--data-file`, and `--episodes`.
+
 For gymnasium-based environments (CartPole, et al.), import from the `gymnasium` package:
 ```python
 import gymnasium as gym
@@ -217,15 +228,21 @@ See: `Reinforcement Learning in Python/Exercises/cartpole_control_approximation_
 7. **For new RL code**: Look at `gridworld_monte_carlo_epsilon_greedy.py` as the basic reference, or `gridworld_policy_control_approximation_algorithm.py` for function approximation patterns
 8. **For approximation algorithms**: Start with `RBFSampler` for feature transformation and implement a `ValueFunctionApproximator` class with `predict()` and `update()` methods
 9. **Module docstrings**: If implementing complex algorithms (approximation, CartPole environments), include comprehensive module-level docstrings describing Key Parts and Dependencies
+10. **Nested RL fundamentals project**: In `Fundamentals of Reinforcement Learning/rl-fundamentals-reference/`, follow its local `AGENTS.md`: keep edits small, preserve `HOMEWORK`/`ASSIGNMENT`/`SOLUTION` markers, and use `utils/prepare_student_repo.py` for student-repo generation tasks.
 
 ## Key Files to Review First
+- `pyproject.toml` - Root pytest configuration (`pythonpath`, `testpaths`)
 - `Reinforcement_Learning_in_Python/Exercises/__init__.py` - Import bridge pattern (sys.path manipulation for space-named directories)
 - `Reinforcement Learning in Python/Exercises/__init__.py` - Not a package; legacy working directory
 - `Reinforcement Learning in Python/Exercises/gridworld_standard_windy.py` - Core gridworld environment (120+ LOC with detailed docs)
 - `Reinforcement Learning in Python/Exercises/pretty_printing.py` - Visualization utilities with Google-style docstrings
 - `Reinforcement Learning in Python/Exercises/gridworld_monte_carlo_epsilon_greedy.py` - Reference RL algorithm implementation
+- `Reinforcement Learning in Python/Exercises/gridworld_policy_control_q_learning_algorithm.py` - Tabular Q-learning implementation used by root tests
+- `Reinforcement Learning in Python/Exercises/gridworld_policy_control_sarsa.py` - Tabular SARSA implementation used by root tests
 - `Reinforcement Learning in Python/Exercises/gridworld_policy_control_approximation_algorithm.py` - Function approximation pattern with optional imports
 - `Reinforcement Learning in Python/Exercises/cartpole_control_approximation_algorithm.py` - Gymnasium environment + approximation (900+ LOC reference)
+- `Reinforcement Learning in Python/Exercises/trading_linear_qlearning.py` - CLI trading agent using CSV data, `StandardScaler`, and saved model/scaler artifacts
+- `Fundamentals of Reinforcement Learning/rl-fundamentals-reference/AGENTS.md` - Local maintainer rules for the nested RL fundamentals project
 - `tests/test_gridworld_monte_carlo_epsilon_greedy.py` - Reference test patterns with mocking
 - `tests/test_gridworld_policy_control_approximation_algorithm.py` - Approximation algorithm testing with mocks
 
