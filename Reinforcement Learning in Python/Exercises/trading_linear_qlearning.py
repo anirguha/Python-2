@@ -44,7 +44,7 @@ EPSILON_MIN: float = 0.01
 GRADIENT_CLIP_NORM: float = 10.0
 MOMENTUM: float = 0.9
 RANDOM_SEED: int = 123
-
+TRADE_FRACTION: float = 0.25 # Percentages of the stock that can be sold/ cash that can be invested in one step
 # ---------------------------
 # Type Aliases and Protocols
 # ---------------------------
@@ -677,7 +677,8 @@ class TradingEnvironment:
         new_portfolio_value: float = self.get_portfolio_value()
         reward: float = (new_portfolio_value - prev_portfolio_value) / prev_portfolio_value
         done: bool = self.cur_step >= self.n_step - 1
-        info: dict = {"portfolio_value": new_portfolio_value}
+        info: dict = {"portfolio_value": new_portfolio_value,
+                      "stock_owned": self.stock_owned.copy()}
         observation: Observation = self._get_observation()
 
         return observation, reward, done, info
@@ -711,44 +712,61 @@ class TradingEnvironment:
 
     def _trade(self, action: int) -> None:
         """
-        Executes a trading action by selling and buying stocks based on the action vector.
+        Executes a trading action by buying, selling, or holding stocks based on
+        the provided action index.
 
-        This method processes a trading action by first converting it to an action vector,
-        then selling all specified stocks to free up cash, and finally attempting to buy
-        specified stocks one share at a time while cash is available. The selling phase
-        always executes completely before any buying occurs. Stocks are purchased
-        sequentially until funds are exhausted.
+        This method processes a trading action that determines whether to sell 25%
+        of holdings, hold the current portfolio, or buy stocks with 25% of available
+        cash. The action is translated into a vector of individual stock actions,
+        where selling operations are executed first, followed by buying operations to
+        ensure sufficient cash is available for purchases.
 
         Args:
-            action: The integer index representing the trading action to execute from
-                the action space.
+            action: The index representing the trading action to execute, must be
+                within the valid action space.
 
         Raises:
-            ValueError: If the provided action is not present in the valid action space.
-            FloatingPointError: If the cash in hand becomes negative after executing
-                the trades, indicating a calculation error.
+            ValueError: If the provided action is not in the valid action space.
+            FloatingPointError: If cash in hand becomes negative after executing
+                trades, indicating a calculation error.
+
+        The action encoding for each stock is as follows:
+        0 - sell 25% of the current holdings
+        1 - hold the portfolio
+        2 - buy with 25% of the current cash
         """
+
         if action not in self.action_space:
             raise ValueError(f"{action} is not a valid action.")
 
         action_vec: List[int] = self.action_list[action]
 
-        stocks_to_sell: List[int] = [i for i, a in enumerate(action_vec) if a == 0]
+        # stocks_to_sell: List[int] = [i for i, a in enumerate(action_vec) if a == 0]
+
+
+        for i, a in enumerate(action_vec):
+        # Sell first.
+            if a == 0:
+                stocks_to_sell: float = np.floor(self.stock_owned[i] * TRADE_FRACTION)
+                self.cash_in_hand += self.stock_price[i] * stocks_to_sell
+                self.stock_owned[i] = max(0.0, self.stock_owned[i] - stocks_to_sell)
+
         stocks_to_buy: List[int] = [i for i, a in enumerate(action_vec) if a == 2]
 
-        # Sell first.
-        for i in stocks_to_sell:
-            self.cash_in_hand += self.stock_price[i] * self.stock_owned[i]
-            self.stock_owned[i] = 0.0
+        if stocks_to_buy:
+            cash_per_stock: float = self.cash_in_hand * TRADE_FRACTION / len(stocks_to_buy)
 
-        # Then buy one share at a time when affordable.
-        for i in stocks_to_buy:
-            if self.cash_in_hand >= self.stock_price[i]:
-                self.stock_owned[i] += 1.0
-                self.cash_in_hand -= self.stock_price[i]
+            for i in stocks_to_buy:
+                shares_to_buy: int = int(cash_per_stock // self.stock_price[i])
 
-        if self.cash_in_hand < -1e-8:
-            raise FloatingPointError(f"Cash became negative: {self.cash_in_hand}")
+                if shares_to_buy > 0:
+                    cost: float = shares_to_buy * self.stock_price[i]
+                    self.cash_in_hand -= cost
+                    self.stock_owned[i] += shares_to_buy
+
+
+            if self.cash_in_hand < -1e-8:
+                raise FloatingPointError(f"Cash became negative: {self.cash_in_hand}")
 
     def get_portfolio_value(self) -> float:
         """
